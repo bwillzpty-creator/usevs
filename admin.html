@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard | Employment Verification USA | US-EVS (US Employment Verification System)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1f2937;
+        --muted: #64727b;
+        --line: #d9e0e3;
+        --paper: #ffffff;
+        --canvas: #f3f6f5;
+        --accent: #176b55;
+        --accent-dark: #105541;
+        --danger: #a33e36;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+      a {
+        color: var(--accent-dark);
+      }
+      .shell {
+        width: min(1440px, calc(100% - 48px));
+        margin: 0 auto;
+      }
+      .topbar {
+        border-bottom: 1px solid var(--line);
+        background: var(--paper);
+      }
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 76px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand img {
+        width: 44px;
+        height: 44px;
+      }
+      .brand-copy {
+        display: grid;
+        gap: 5px;
+      }
+      .brand-copy small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .brand-copy strong {
+        font-size: 18px;
+      }
+      .top-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .upgrade-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .upgrade-form select {
+        min-height: 38px;
+        padding: 7px 9px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+        font-size: 13px;
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      main {
+        padding: 30px 0 56px;
+      }
+      .page-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+      }
+      .page-heading p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .status {
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .status-error {
+        color: var(--danger);
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .stat {
+        min-height: 112px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-top: 3px solid var(--accent);
+        background: var(--paper);
+      }
+      .stat-label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .stat-value {
+        display: block;
+        margin-top: 12px;
+        font-size: 30px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+      .section-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .workspace-section {
+        margin-top: 26px;
+      }
+      .search-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
+        align-items: end;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+      }
+      label {
+        display: grid;
+        gap: 7px;
+        color: #39464d;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 10px;
+        border: 1px solid #bfcbd0;
+        border-radius: 4px;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+      }
+      button {
+        min-height: 38px;
+        padding: 8px 12px;
+        border: 1px solid #bdc9cd;
+        border-radius: 4px;
+        background: #fff;
+        color: var(--ink);
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button:hover {
+        border-color: var(--accent);
+        color: var(--accent-dark);
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+      }
+      .primary-button {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+      .primary-button:hover {
+        border-color: var(--accent-dark);
+        background: var(--accent-dark);
+        color: #fff;
+      }
+      .table-frame {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        background: var(--paper);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 13px;
+      }
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e7ecee;
+        vertical-align: middle;
+      }
+      th {
+        background: #f7f9f8;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+      tbody tr:hover {
+        background: #f9fbfa;
+      }
+      .reference-cell {
+        color: var(--accent-dark);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .actions-cell {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-width: 250px;
+      }
+      .table-action {
+        min-height: 30px;
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+      .empty-cell {
+        padding: 24px 14px;
+        color: var(--muted);
+        text-align: center;
+      }
+      dialog {
+        width: min(760px, calc(100% - 32px));
+        max-height: min(86vh, 900px);
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+        box-shadow: 0 24px 70px rgba(18, 35, 31, 0.24);
+      }
+      dialog::backdrop {
+        background: rgba(18, 28, 31, 0.54);
+      }
+      .dialog-content {
+        padding: 22px;
+      }
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .dialog-header h2 {
+        overflow-wrap: anywhere;
+      }
+      .icon-close {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+        font-size: 20px;
+      }
+      #letterDialogOutput {
+        max-height: 62vh;
+        overflow-y: auto;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-top: 3px solid var(--accent);
+      }
+      .letter-title {
+        margin: 0 0 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 17px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .letter-meta {
+        margin: 4px 0;
+        color: var(--muted);
+        font-size: 11px;
+        text-align: center;
+      }
+      .letter-section-title {
+        margin: 22px 0 8px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #e4e8eb;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .letter-line {
+        margin: 7px 0;
+        padding-left: 16px;
+        line-height: 1.6;
+      }
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .email-form {
+        display: grid;
+        gap: 14px;
+      }
+      @media (max-width: 880px) {
+        .search-form {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .search-form .primary-button {
+          grid-column: 1 / -1;
+        }
+      }
+      @media (max-width: 600px) {
+        .shell {
+          width: calc(100% - 28px);
+        }
+        .topbar-inner,
+        .page-heading {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .topbar-inner {
+          justify-content: center;
+          padding: 14px 0;
+        }
+        .top-links {
+          gap: 14px;
+        }
+        main {
+          padding-top: 22px;
+        }
+        h1 {
+          font-size: 23px;
+        }
+        .stats-grid {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .stat {
+          min-height: 88px;
+        }
+        .stat-value {
+          margin-top: 7px;
+          font-size: 26px;
+        }
+        .search-form {
+          grid-template-columns: 1fr;
+        }
+        .search-form .primary-button {
+          grid-column: auto;
+        }
+        .dialog-content {
+          padding: 16px;
+        }
+        #letterDialogOutput {
+          padding: 16px;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="/public/brand.css" />
+    <script src="/public/launch-config.js" defer></script>
+    <script src="/letter-pdf.js" defer></script>
+    <script src="/script.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="shell topbar-inner">
+        <div class="brand">
+          <img src="/public/us-evs-mark.svg" alt="" />
+          <div class="brand-copy">
+            <small>US-EVS · US EMPLOYMENT VERIFICATION SYSTEM / ADMINISTRATION</small>
+            <strong>Employment Verification USA</strong>
+          </div>
+        </div>
+        <nav class="top-links" aria-label="Application navigation">
+          <a href="/landing">Back to Landing Page</a>
+          <a href="/">Generate letter</a>
+          <a href="/verify-page">Public verification</a>
+        </nav>
+        <form class="upgrade-form" action="/payfast/initiate" method="post" data-premium-control hidden>
+          <label class="visually-hidden" for="upgradePaymentType">Payment type</label>
+          <select id="upgradePaymentType" name="paymentType">
+            <option value="once-off">Once-off</option>
+            <option value="subscription">Subscription</option>
+          </select>
+          <button class="primary-button" type="submit">Go Premium</button>
+        </form>
+      </div>
+    </header>
+
+    <main id="adminDashboard" class="shell">
+      <div class="page-heading">
+        <div>
+          <h1>Admin dashboard</h1>
+          <p>Employment verification records and delivery activity.</p>
+        </div>
+        <p id="statsStatus" class="status" aria-live="polite">Loading statistics...</p>
+      </div>
+      <p class="soft-launch-notice" data-premium-unavailable>Premium features will activate once PayFast is live.</p>
+
+      <section class="stats-grid" aria-label="Letter statistics">
+        <article class="stat">
+          <span class="stat-label">Total letters</span>
+          <strong id="totalLetters" class="stat-value">—</strong>
+        </article>
+        <article class="stat">
+          <span class="stat-label">Generated today (UTC)</span>
+          <strong id="todayCount" class="stat-value">—</strong>
+        </article>
+        <article class="stat">
+          <span class="stat-label">Last 7 days</span>
+          <strong id="last7DaysCount" class="stat-value">—</strong>
+        </article>
+      </section>
+
+      <section class="workspace-section" aria-labelledby="searchHeading">
+        <div class="section-heading">
+          <h2 id="searchHeading">Letter records</h2>
+          <p id="resultsStatus" class="status" aria-live="polite">Loading records...</p>
+        </div>
+        <form id="adminSearchForm" class="search-form">
+          <label for="employeeName">Employee name
+            <input id="employeeName" name="employeeName" type="search" autocomplete="off" />
+          </label>
+          <label for="employerName">Employer name
+            <input id="employerName" name="employerName" type="search" autocomplete="off" />
+          </label>
+          <label for="referenceNumber">Reference number
+            <input id="referenceNumber" name="referenceNumber" type="search" autocomplete="off" />
+          </label>
+          <button class="primary-button" type="submit">Search</button>
+        </form>
+        <div class="table-frame">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Reference</th>
+                <th scope="col">Employee</th>
+                <th scope="col">Employer</th>
+                <th scope="col">Generated</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="searchResultsBody">
+              <tr><td class="empty-cell" colspan="5">Loading records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="workspace-section" aria-labelledby="recentHeading">
+        <div class="section-heading">
+          <h2 id="recentHeading">Recent letters</h2>
+          <span class="status">Most recent 10</span>
+        </div>
+        <div class="table-frame">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Reference</th>
+                <th scope="col">Employee</th>
+                <th scope="col">Employer</th>
+                <th scope="col">Generated</th>
+              </tr>
+            </thead>
+            <tbody id="recentLettersBody">
+              <tr><td class="empty-cell" colspan="4">Loading recent letters...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell app-footer">
+      <strong>Employment Verification USA <span>US-EVS · US Employment Verification System</span></strong>
+      <a href="https://usevs.onrender.com">usevs.onrender.com</a>
+    </footer>
+
+    <dialog id="letterDialog" aria-labelledby="letterDialogHeading">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h2 id="letterDialogHeading">Employment verification letter</h2>
+          <button class="icon-close" type="button" data-close-dialog aria-label="Close letter">×</button>
+        </div>
+        <div id="letterDialogOutput"></div>
+        <div class="dialog-actions">
+          <button id="letterDialogDownload" type="button">Download PDF</button>
+          <button type="button" data-close-dialog>Close</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="emailDialog" aria-labelledby="emailDialogHeading">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h2 id="emailDialogHeading">Send letter by email</h2>
+          <button class="icon-close" type="button" data-close-dialog aria-label="Close email dialog">×</button>
+        </div>
+        <form id="emailForm" class="email-form">
+          <label for="recipientEmail">Recipient email
+            <input id="recipientEmail" name="email" type="email" autocomplete="email" required />
+          </label>
+          <p id="emailStatus" class="status" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button type="button" data-close-dialog>Cancel</button>
+            <button class="primary-button" type="submit">Send Email</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  </body>
+</html>

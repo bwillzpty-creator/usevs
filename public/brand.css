@@ -1,0 +1,83 @@
+:root {
+  --brand-ink: #1f2937;
+  --brand-muted: #64727b;
+  --brand-line: #d9e0e3;
+  --brand-paper: #ffffff;
+  --brand-canvas: #f3f6f5;
+  --brand-green: #176b55;
+  --brand-green-dark: #105541;
+  --brand-rust: #c8754d;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--brand-ink);
+  font-family: Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--brand-rust);
+  outline-offset: 3px;
+}
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-top: 1px solid var(--brand-line);
+  color: var(--brand-muted);
+  font-size: 12px;
+}
+
+.app-footer strong {
+  color: var(--brand-ink);
+}
+
+.app-footer strong span {
+  margin-left: 6px;
+  color: var(--brand-green);
+  font-size: 10px;
+}
+
+.app-footer a {
+  color: var(--brand-green-dark);
+}
+
+[data-premium-control][hidden],
+[data-premium-unavailable][hidden] {
+  display: none !important;
+}
+
+.soft-launch-notice {
+  margin: 14px 0;
+  padding: 11px 14px;
+  border-left: 3px solid var(--brand-rust);
+  background: #f6eee8;
+  color: #63442f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .app-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

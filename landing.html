@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Employment Verification USA, US-EVS (US Employment Verification System): Instant Employment Verification for the United States." />
+    <meta name="application-name" content="Employment Verification USA" />
+    <link rel="canonical" href="https://usevs.onrender.com/landing" />
+    <title>Employment Verification USA | US-EVS (US Employment Verification System)</title>
+    <link rel="stylesheet" href="/public/brand.css" />
+    <script src="/public/launch-config.js" defer></script>
+    <script src="/script.js" defer></script>
+    <style>
+      :root {
+        --ink: #1f2937;
+        --muted: #65747b;
+        --line: #d9e0e3;
+        --paper: #ffffff;
+        --canvas: #f3f6f5;
+        --green: #176b55;
+        --deep: #163c33;
+        --rust: #c8754d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+      a {
+        color: inherit;
+      }
+      .shell {
+        width: min(1160px, calc(100% - 48px));
+        margin: 0 auto;
+      }
+      .site-header {
+        position: relative;
+        z-index: 2;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+      }
+      .header-inner {
+        min-height: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+      }
+      .brand-lockup img {
+        width: 44px;
+        height: 44px;
+      }
+      .brand-copy {
+        display: grid;
+        gap: 4px;
+      }
+      .brand-copy strong {
+        font-size: 15px;
+      }
+      .brand-copy small {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .main-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 22px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .main-nav a {
+        text-decoration: none;
+      }
+      .main-nav a:hover {
+        color: var(--green);
+      }
+      .hero {
+        overflow: hidden;
+        background-color: var(--deep);
+        background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+        background-size: 38px 38px;
+        color: #fff;
+      }
+      .hero-inner {
+        min-height: 590px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
+        align-items: center;
+        gap: clamp(32px, 7vw, 86px);
+        padding-top: 54px;
+        padding-bottom: 70px;
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #c5d9d1;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .eyebrow::before {
+        width: 24px;
+        height: 2px;
+        background: var(--rust);
+        content: "";
+      }
+      h1 {
+        max-width: 620px;
+        margin: 20px 0 18px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 64px;
+        font-weight: 400;
+        line-height: 1.02;
+      }
+      .hero-copy {
+        max-width: 570px;
+        margin: 0;
+        color: #d2dfda;
+        font-size: 17px;
+        line-height: 1.7;
+      }
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .button {
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 17px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .button-light {
+        background: #fff;
+        color: var(--deep);
+      }
+      .button-outline {
+        border-color: rgba(255, 255, 255, 0.42);
+        background: transparent;
+        color: #fff;
+      }
+      .button-green {
+        background: var(--green);
+        color: #fff;
+      }
+      .button-rust {
+        background: var(--rust);
+        color: #fff;
+      }
+      .hero-actions .button:hover,
+      .price-card .button:hover {
+        filter: brightness(0.94);
+      }
+      .hero-notes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-top: 26px;
+        color: #c5d9d1;
+        font-size: 12px;
+      }
+      .hero-notes span::before {
+        margin-right: 7px;
+        color: #d88a61;
+        content: "•";
+      }
+      .document-wrap {
+        position: relative;
+        padding: 22px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .document-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: #d2dfda;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .letter-preview {
+        min-height: 350px;
+        padding: 30px 32px;
+        background: var(--paper);
+        color: var(--ink);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+      }
+      .letter-preview-head {
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: center;
+      }
+      .letter-preview-head small {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--green);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .letter-preview h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 15px;
+      }
+      .letter-preview-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 13px 0 20px;
+        color: var(--muted);
+        font-size: 9px;
+      }
+      .letter-preview h3 {
+        margin: 17px 0 7px;
+        color: var(--green);
+        font-size: 9px;
+        text-transform: uppercase;
+      }
+      .letter-preview p {
+        margin: 4px 0;
+        color: #45535a;
+        font-size: 10px;
+        line-height: 1.6;
+      }
+      .sample-stamp {
+        display: inline-block;
+        margin-top: 15px;
+        padding: 5px 7px;
+        border: 1px solid #bad4c9;
+        color: var(--green);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .trust-strip {
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+      }
+      .trust-strip-inner {
+        min-height: 74px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        align-items: center;
+        gap: 20px;
+      }
+      .trust-point {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #405049;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .trust-point b {
+        color: var(--rust);
+        font-size: 17px;
+      }
+      section.content-section {
+        padding: 78px 0;
+      }
+      .section-kicker {
+        margin: 0 0 10px;
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .section-title {
+        max-width: 620px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 36px;
+        font-weight: 400;
+        line-height: 1.15;
+      }
+      .section-intro {
+        max-width: 630px;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 32px;
+      }
+      .price-card {
+        min-height: 310px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 26px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      .price-card.featured {
+        border-top: 4px solid var(--green);
+      }
+      .price-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .price {
+        margin: 17px 0 4px;
+        color: var(--deep);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 42px;
+      }
+      .price small {
+        color: var(--muted);
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+      }
+      .price-card p {
+        margin: 8px 0 16px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .feature-list {
+        display: grid;
+        gap: 9px;
+        margin: 0 0 22px;
+        padding: 0;
+        color: #405049;
+        font-size: 12px;
+        list-style: none;
+      }
+      .feature-list li::before {
+        margin-right: 8px;
+        color: var(--green);
+        content: "✓";
+      }
+      .price-card form {
+        margin-top: auto;
+      }
+      .how-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+        margin-top: 30px;
+      }
+      .how-step {
+        padding-top: 16px;
+        border-top: 2px solid var(--line);
+      }
+      .how-step strong {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--rust);
+        font-size: 12px;
+      }
+      .how-step h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .how-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .trust-section {
+        background: #e8efec;
+      }
+      .trust-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 56px;
+        align-items: start;
+      }
+      .trust-list {
+        display: grid;
+        gap: 0;
+      }
+      .trust-item {
+        padding: 16px 0;
+        border-top: 1px solid #cad8d2;
+      }
+      .trust-item strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      .trust-item p {
+        margin: 0;
+        color: #586a63;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .footer {
+        padding: 28px 0;
+        background: var(--deep);
+        color: #e5eeea;
+      }
+      .footer-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .footer-brand img {
+        width: 36px;
+        height: 36px;
+      }
+      .footer small {
+        color: #c5d9d1;
+        font-size: 11px;
+      }
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        font-size: 12px;
+      }
+      .footer-links a {
+        color: #e5eeea;
+      }
+      @media (max-width: 850px) {
+        .hero-inner {
+          grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
+          gap: 30px;
+        }
+        .letter-preview {
+          padding: 24px;
+        }
+        .trust-grid {
+          gap: 30px;
+        }
+      }
+      @media (max-width: 700px) {
+        .shell {
+          width: min(100% - 32px, 560px);
+        }
+        .header-inner {
+          min-height: 72px;
+        }
+        .main-nav {
+          gap: 12px;
+          font-size: 12px;
+        }
+        .main-nav a:nth-child(3) {
+          display: none;
+        }
+        .hero-inner {
+          min-height: 0;
+          grid-template-columns: 1fr;
+          padding-top: 58px;
+          padding-bottom: 42px;
+        }
+        h1 {
+          max-width: 500px;
+          font-size: 48px;
+        }
+        .hero-copy {
+          font-size: 15px;
+        }
+        .document-wrap {
+          max-width: 480px;
+          margin: 12px auto 0;
+        }
+        .trust-strip-inner {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 12px 0;
+        }
+        .trust-point {
+          min-height: 36px;
+        }
+        section.content-section {
+          padding: 58px 0;
+        }
+        .section-title {
+          font-size: 31px;
+        }
+        .pricing-grid,
+        .how-grid,
+        .trust-grid {
+          grid-template-columns: 1fr;
+        }
+        .pricing-grid {
+          gap: 12px;
+        }
+        .price-card {
+          min-height: 290px;
+        }
+        .trust-grid {
+          gap: 24px;
+        }
+      }
+      @media (max-width: 460px) {
+        .header-inner {
+          align-items: flex-start;
+          flex-direction: column;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px 0;
+        }
+        .main-nav {
+          width: 100%;
+          justify-content: space-between;
+        }
+        h1 {
+          font-size: 42px;
+        }
+        .hero-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+        .hero-actions .button {
+          width: 100%;
+        }
+        .document-wrap {
+          padding: 12px;
+        }
+        .letter-preview {
+          min-height: auto;
+          padding: 20px;
+        }
+        .footer-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand-lockup" href="/landing" aria-label="Employment Verification USA home">
+          <img src="/public/us-evs-mark.svg" alt="" />
+          <span class="brand-copy"><strong>Employment Verification USA</strong><small>US-EVS · US Employment Verification System</small></span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="#pricing">Pricing</a>
+          <a href="/verify-page">Verify a letter</a>
+          <a href="/admin-page">Admin dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="shell hero-inner">
+          <div>
+            <p class="eyebrow">US-EVS · US EMPLOYMENT VERIFICATION SYSTEM</p>
+            <h1>Employment Verification USA</h1>
+            <p class="hero-copy">Instant Employment Verification for the United States</p>
+            <p class="hero-detail">Create a formal employment letter, give every record a traceable reference, and let recipients verify it online.</p>
+            <div class="hero-actions">
+              <a class="button button-light" href="/">Create a letter</a>
+              <a class="button button-outline" href="/verify-page">Verify a letter</a>
+              <a class="button button-outline" href="/admin-page">Admin dashboard</a>
+            </div>
+            <div class="hero-notes">
+              <span>Structured letters</span>
+              <span>Reference lookup</span>
+              <span>PDF-ready</span>
+            </div>
+          </div>
+          <div class="document-wrap" aria-label="Sample employment verification letter preview">
+            <div class="document-label"><span>LETTER PREVIEW</span><span>ILLUSTRATIVE SAMPLE</span></div>
+            <article class="letter-preview">
+              <div class="letter-preview-head">
+                <small>US-EVS · US EMPLOYMENT VERIFICATION SYSTEM</small>
+                <h2>EMPLOYMENT VERIFICATION LETTER</h2>
+              </div>
+              <div class="letter-preview-meta"><span>Reference: EV-2026-0001</span><span>26 Sep 2026</span></div>
+              <h3>Employee Information</h3>
+              <p>Employee Name: Alex Morgan</p>
+              <h3>Employment Details</h3>
+              <p>Employer: Northstar Group</p>
+              <p>Position: Operations Analyst</p>
+              <h3>Company Information</h3>
+              <p>Company Address: 18 Market Street</p>
+              <span class="sample-stamp">SAMPLE DOCUMENT</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="Service highlights">
+        <div class="shell trust-strip-inner">
+          <div class="trust-point"><b>01</b> Reference number on every letter</div>
+          <div class="trust-point"><b>02</b> Public verification by reference</div>
+          <div class="trust-point"><b>03</b> Premium email and PDF delivery</div>
+        </div>
+      </section>
+
+      <section id="pricing" class="content-section">
+        <div class="shell">
+          <p class="section-kicker">CLEAR, SIMPLE PRICING</p>
+          <h2 class="section-title">Choose the pace that fits your work.</h2>
+          <p class="section-intro">Pay for an individual letter or choose a monthly plan for ongoing verification work. Prices are shown in South African rand.</p>
+          <p class="soft-launch-notice" data-premium-unavailable>Premium features will activate once PayFast is live.</p>
+          <div class="pricing-grid">
+            <article class="price-card">
+              <span class="price-label">PAY PER LETTER</span>
+              <div class="price">R49 <small>/ letter</small></div>
+              <p>For occasional employment verification requests.</p>
+              <ul class="feature-list">
+                <li>One verification letter</li>
+                <li>PDF download</li>
+                <li>Email delivery</li>
+              </ul>
+              <form action="/payfast/initiate" method="post" data-premium-control hidden>
+                <input type="hidden" name="paymentType" value="once-off" />
+                <button class="button button-green" type="submit">Pay per letter</button>
+              </form>
+            </article>
+            <article class="price-card featured">
+              <span class="price-label">MONTHLY SUBSCRIPTION</span>
+              <div class="price">R199 <small>/ month</small></div>
+              <p>For teams and operators handling regular requests.</p>
+              <ul class="feature-list">
+                <li>Unlimited letters while subscribed</li>
+                <li>PDF download and email delivery</li>
+                <li>Reference lookup and history</li>
+              </ul>
+              <form action="/payfast/initiate" method="post" data-premium-control hidden>
+                <input type="hidden" name="paymentType" value="subscription" />
+                <button class="button button-rust" type="submit">Go Premium</button>
+              </form>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section trust-section">
+        <div class="shell trust-grid">
+          <div>
+            <p class="section-kicker">BUILT FOR A CLEAR RECORD</p>
+            <h2 class="section-title">A straightforward trail from issue to verification.</h2>
+            <p class="section-intro">Employment Verification USA keeps the document flow simple and gives recipients a clear way to confirm a letter reference.</p>
+          </div>
+          <div class="trust-list">
+            <article class="trust-item">
+              <strong>Reference and timestamp</strong>
+              <p>Each generated letter carries a unique reference number and issue time for easy follow-up.</p>
+            </article>
+            <article class="trust-item">
+              <strong>Recipient verification</strong>
+              <p>Share the public verification page so a recipient can look up a letter by reference.</p>
+            </article>
+            <article class="trust-item">
+              <strong>Payment confirmation</strong>
+              <p>Premium access is recorded after PayFast confirms the payment notification.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="shell">
+          <p class="section-kicker">THREE SIMPLE STEPS</p>
+          <h2 class="section-title">Get a letter ready to share.</h2>
+          <div class="how-grid">
+            <article class="how-step"><strong>STEP 01</strong><h3>Enter employment details</h3><p>Provide the employee, employer, role, and start date.</p></article>
+            <article class="how-step"><strong>STEP 02</strong><h3>Generate the record</h3><p>Review the structured letter, reference, and timestamp.</p></article>
+            <article class="how-step"><strong>STEP 03</strong><h3>Share with confidence</h3><p>Download a PDF or let the recipient verify the reference online.</p></article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell footer-inner">
+        <div class="footer-brand">
+          <img src="/public/us-evs-mark.svg" alt="" />
+          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://usevs.onrender.com">usevs.onrender.com</a></small></div>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="/">Create a letter</a>
+          <a href="/verify-page">Verify a letter</a>
+          <a href="/admin-page">Admin dashboard</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

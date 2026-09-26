@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Employment Verification USA | US-EVS (US Employment Verification System)</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      main {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .page-nav {
+        max-width: 648px;
+        margin: 0 auto 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #1f2937;
+        text-decoration: none;
+      }
+      .brand-lockup img {
+        width: 40px;
+        height: 40px;
+      }
+      .brand-lockup span {
+        display: grid;
+        gap: 3px;
+      }
+      .brand-lockup small {
+        color: #64727b;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .page-nav > a:last-child {
+        color: #176b55;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .page-nav .brand-lockup strong {
+        font-size: 13px;
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-weight: 600;
+      }
+      input,
+      textarea,
+      button {
+        box-sizing: border-box;
+        font: inherit;
+        padding: 10px 12px;
+      }
+      button {
+        border: 0;
+        border-radius: 4px;
+        background: #176b55;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+      #output {
+        margin-top: 16px;
+        padding: 24px;
+        border: 1px solid #d7dde2;
+        border-top: 3px solid #176b55;
+        background: #fff;
+        color: #1f2937;
+      }
+      .letter-title {
+        margin: 0 0 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #d7dde2;
+        font-size: 17px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .letter-meta {
+        margin: 4px 0;
+        color: #52616b;
+        font-size: 11px;
+        text-align: center;
+      }
+      .letter-section-title {
+        margin: 22px 0 8px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #e4e8eb;
+        color: #176b55;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .letter-line {
+        margin: 7px 0;
+        padding-left: 16px;
+        line-height: 1.6;
+      }
+      #downloadPdfButton {
+        margin-top: 8px;
+      }
+      @media (max-width: 600px) {
+        body {
+          margin: 16px;
+        }
+        main {
+          padding: 18px;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="/public/brand.css" />
+    <script src="/letter-pdf.js" defer></script>
+    <script src="/script.js" defer></script>
+  </head>
+  <body>
+    <header class="page-nav">
+      <a class="brand-lockup" href="/landing">
+        <img src="/public/us-evs-mark.svg" alt="" />
+        <span><strong>Employment Verification USA</strong><small>US-EVS · US Employment Verification System</small></span>
+      </a>
+      <a href="/landing">Back to Landing Page</a>
+    </header>
+    <main>
+      <h1>Create a verification letter</h1>
+      <form id="verifyForm">
+        <label for="employeeName">Employee name</label>
+        <input id="employeeName" name="employeeName" required />
+
+        <label for="employerName">Employer name</label>
+        <input id="employerName" name="employerName" required />
+
+        <label for="jobTitle">Job title</label>
+        <input id="jobTitle" name="jobTitle" required />
+
+        <label for="startDate">Start date</label>
+        <input id="startDate" name="startDate" type="date" required />
+
+        <label for="endDate">End date (optional)</label>
+        <input id="endDate" name="endDate" type="date" />
+
+        <label for="companyAddress">Company address (optional)</label>
+        <textarea id="companyAddress" name="companyAddress" rows="3"></textarea>
+
+        <button type="submit">Generate letter</button>
+      </form>
+      <section aria-live="polite">
+        <h2>Generated letter</h2>
+        <div id="output" class="letter-document"></div>
+        <button id="downloadPdfButton" type="button" disabled>Download PDF</button>
+      </section>
+    </main>
+    <footer class="app-footer">
+      <strong>Employment Verification USA <span>US-EVS · US Employment Verification System</span></strong>
+      <a href="https://usevs.onrender.com">usevs.onrender.com</a>
+    </footer>
+  </body>
+</html>
