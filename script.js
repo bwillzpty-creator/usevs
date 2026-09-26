@@ -8,6 +8,58 @@ document.querySelectorAll("[data-premium-unavailable]").forEach((notice) => {
   notice.hidden = premiumPaymentsEnabled;
 });
 
+const issuerLogoutButton = document.getElementById("issuerLogoutButton");
+if (issuerLogoutButton) {
+  fetch("/api/auth/session", { credentials: "same-origin" })
+    .then((response) => {
+      if (!response.ok) throw new Error("Sign-in required");
+      return response.json();
+    })
+    .then((session) => {
+      document.getElementById("issuerEmployerName").textContent = session.employer.legalName;
+      document.getElementById("issuerOfficerName").textContent = `${session.officer.fullName} · ${session.officer.title}`;
+    })
+    .catch(() => window.location.replace("/issuer"));
+
+  issuerLogoutButton.addEventListener("click", async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    window.location.replace("/issuer");
+  });
+}
+
+const addOfficerForm = document.getElementById("addOfficerForm");
+if (addOfficerForm) {
+  addOfficerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    const status = document.getElementById("addOfficerStatus");
+    button.disabled = true;
+    status.textContent = "Adding HR signatory...";
+    try {
+      const response = await fetch("/api/employers/officers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          fullName: form.elements.fullName.value,
+          title: form.elements.title.value,
+          email: form.elements.email.value,
+          password: form.elements.password.value
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to add signatory.");
+      form.reset();
+      status.textContent = result.message;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
 function renderLetter(text, output) {
   const fragment = document.createDocumentFragment();
 
@@ -71,20 +123,19 @@ if (verifyForm) {
 
     const data = {
       employeeName: document.getElementById("employeeName").value,
-      employerName: document.getElementById("employerName").value,
       jobTitle: document.getElementById("jobTitle").value,
       startDate: document.getElementById("startDate").value,
-      endDate: document.getElementById("endDate").value,
-      companyAddress: document.getElementById("companyAddress").value
+      endDate: document.getElementById("endDate").value
     };
 
     button.disabled = true;
     output.innerText = "Generating letter...";
 
     try {
-      const response = await fetch("/verify", {
+      const response = await fetch("/api/letters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(data)
       });
 
@@ -106,13 +157,12 @@ if (verifyForm) {
 
 const lookupForm = document.getElementById("lookupForm");
 if (lookupForm) {
+  const referenceFromUrl = new URLSearchParams(window.location.search).get("ref");
   lookupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const button = e.currentTarget.querySelector('button[type="submit"]');
     const output = document.getElementById("output");
-    generatedLetter = "";
-    downloadButton.disabled = true;
 
     const referenceNumber = document.getElementById("referenceNumber").value.trim();
     if (!referenceNumber) {
@@ -126,10 +176,15 @@ if (lookupForm) {
     try {
       const response = await fetch(`/lookup?ref=${encodeURIComponent(referenceNumber)}`);
       const result = await response.json();
-      if (response.ok && typeof result.letter === "string") {
-        generatedLetter = result.letter;
-        renderLetter(generatedLetter, output);
-        downloadButton.disabled = false;
+      if (response.ok && result.success) {
+        output.textContent = [
+          `Employer authorization: Verified`,
+          `Record status: ${result.status === "verified" ? "Active" : "Expired"}`,
+          `Reference number: ${result.referenceNumber}`,
+          `Verified employer: ${result.employerName} (${result.employerEmail})`,
+          `Authorized signatory: ${result.signatoryName}, ${result.signatoryTitle} (${result.signatoryEmail})`,
+          `Generated: ${result.timestamp}`
+        ].join("\n");
       } else {
         output.innerText = "Error: " + (result.message || "Unable to verify this letter.");
       }
@@ -139,6 +194,11 @@ if (lookupForm) {
       button.disabled = false;
     }
   });
+
+  if (referenceFromUrl) {
+    document.getElementById("referenceNumber").value = referenceFromUrl;
+    lookupForm.requestSubmit();
+  }
 }
 
 const adminDashboard = document.getElementById("adminDashboard");

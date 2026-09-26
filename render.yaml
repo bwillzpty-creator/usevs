@@ -23,3 +23,23 @@ services:
         value: "4.99"
       - key: PAYFAST_SUBSCRIPTION_AMOUNT
         value: "24.99"
+      - key: PUBLIC_BASE_URL
+        value: https://usevs.onrender.com
+      - key: DATA_DIR
+        sync: false
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: ISSUER_REVIEW_TOKEN
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

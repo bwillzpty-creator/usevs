@@ -147,12 +147,14 @@
     </header>
     <main>
       <h1>Create a verification letter</h1>
+      <section class="issuer-session" aria-label="Verified issuer account">
+        <p><strong id="issuerEmployerName"></strong></p>
+        <p>Authorized signatory: <span id="issuerOfficerName"></span></p>
+        <button id="issuerLogoutButton" type="button">Sign out</button>
+      </section>
       <form id="verifyForm">
         <label for="employeeName">Employee name</label>
         <input id="employeeName" name="employeeName" required />
-
-        <label for="employerName">Employer name</label>
-        <input id="employerName" name="employerName" required />
 
         <label for="jobTitle">Job title</label>
         <input id="jobTitle" name="jobTitle" required />
@@ -163,9 +165,6 @@
         <label for="endDate">End date (optional)</label>
         <input id="endDate" name="endDate" type="date" />
 
-        <label for="companyAddress">Company address (optional)</label>
-        <textarea id="companyAddress" name="companyAddress" rows="3"></textarea>
-
         <button type="submit">Generate letter</button>
       </form>
       <section aria-live="polite">
@@ -173,6 +172,21 @@
         <div id="output" class="letter-document"></div>
         <button id="downloadPdfButton" type="button" disabled>Download PDF</button>
       </section>
+      <details class="issuer-officer-management">
+        <summary>Add an HR signatory</summary>
+        <form id="addOfficerForm">
+          <label for="newOfficerName">Full name</label>
+          <input id="newOfficerName" name="fullName" autocomplete="name" required />
+          <label for="newOfficerTitle">Title</label>
+          <input id="newOfficerTitle" name="title" required />
+          <label for="newOfficerEmail">Corporate email</label>
+          <input id="newOfficerEmail" name="email" type="email" autocomplete="email" required />
+          <label for="newOfficerPassword">Temporary password (12+ characters)</label>
+          <input id="newOfficerPassword" name="password" type="password" minlength="12" autocomplete="new-password" required />
+          <button type="submit">Add signatory</button>
+          <p id="addOfficerStatus" role="status" aria-live="polite"></p>
+        </form>
+      </details>
     </main>
     <footer class="app-footer">
       <strong>Employment Verification USA <span>US-EVS · US Employment Verification System</span></strong>

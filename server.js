@@ -7,12 +7,16 @@ const crypto = require('crypto');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { createPdfBuffer } = require('./letter-pdf');
+const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const dataDirectory = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
 const historyPath = path.join(dataDirectory, 'letter_history.json');
 const paymentsPath = path.join(dataDirectory, 'payments.json');
+const secureLettersPath = path.join(dataDirectory, 'secure_letters.json');
+const verificationAuditPath = path.join(dataDirectory, 'verification_audit.json');
+const issuerAccountsPath = path.join(dataDirectory, 'issuer_accounts.json');
 const smtpPort = Number(process.env.SMTP_PORT || 587);
 const emailFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
 const emailTransport = process.env.SMTP_HOST && emailFrom && Number.isInteger(smtpPort)
@@ -28,6 +32,15 @@ const emailTransport = process.env.SMTP_HOST && emailFrom && Number.isInteger(sm
 let referenceSequence = 0;
 let historyWriteQueue = Promise.resolve();
 let paymentWriteQueue = Promise.resolve();
+let letterDataWriteQueue = Promise.resolve();
+const issuerAuth = new IssuerAuth({
+  storePath: issuerAccountsPath,
+  encryptionKey: process.env.DATA_ENCRYPTION_KEY,
+  emailTransport,
+  emailFrom,
+  publicBaseUrl: process.env.PUBLIC_BASE_URL,
+  reviewToken: process.env.ISSUER_REVIEW_TOKEN
+});
 
 async function ensureJsonArrayFile(filePath) {
   try {
@@ -40,6 +53,135 @@ async function ensureJsonArrayFile(filePath) {
       if (createError.code !== 'EEXIST') throw createError;
     }
   }
+}
+
+async function readJsonArray(filePath, label) {
+  const value = JSON.parse(await fs.readFile(filePath, 'utf8'));
+  if (!Array.isArray(value)) throw new Error(`${label} must be a JSON array`);
+  return value;
+}
+
+function appendJsonArray(filePath, label, queueName, entry) {
+  const writeEntry = async () => {
+    const entries = await readJsonArray(filePath, label);
+    entries.push(entry);
+    const temporaryPath = `${filePath}.tmp`;
+    await fs.writeFile(temporaryPath, `${JSON.stringify(entries, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+    await fs.rename(temporaryPath, filePath);
+  };
+  const pending = letterDataWriteQueue.then(writeEntry, writeEntry);
+  letterDataWriteQueue = pending.catch(() => {});
+  return pending;
+}
+
+function allocateReferenceNumber() {
+  const allocate = async () => {
+    const audit = await readJsonArray(verificationAuditPath, 'Verification audit');
+    const existing = new Set(audit.map((entry) => entry.referenceNumber));
+    const year = new Date().getUTCFullYear();
+    for (let attempts = 0; attempts < 10000; attempts += 1) {
+      referenceSequence = (referenceSequence + 1) % 10000;
+      const candidate = `EV-${year}-${String(referenceSequence).padStart(4, '0')}`;
+      if (!existing.has(candidate)) return candidate;
+    }
+    throw new Error('No verification references are available for this year.');
+  };
+  const pending = letterDataWriteQueue.then(allocate, allocate);
+  letterDataWriteQueue = pending.catch(() => {});
+  return pending;
+}
+
+function purgeExpiredEmployeeData() {
+  const now = Date.now();
+  const purge = async () => {
+    const secureLetters = await readJsonArray(secureLettersPath, 'Secure letter storage');
+    let secureLettersChanged = false;
+    secureLetters.forEach((entry) => {
+      const expiresAt = Date.parse(entry.expiresAt);
+      if (entry.encryptedData && (!Number.isFinite(expiresAt) || expiresAt <= now)) {
+        entry.encryptedData = null;
+        secureLettersChanged = true;
+      }
+    });
+    if (secureLettersChanged) {
+      const temporaryPath = `${secureLettersPath}.tmp`;
+      await fs.writeFile(temporaryPath, `${JSON.stringify(secureLetters, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+      await fs.rename(temporaryPath, secureLettersPath);
+    }
+
+    const audit = await readJsonArray(verificationAuditPath, 'Verification audit');
+    const expiredReferences = new Set(secureLetters.filter((entry) => !entry.encryptedData).map((entry) => entry.referenceNumber));
+    let auditChanged = false;
+    audit.forEach((entry) => {
+      if (entry.status === 'verified' && expiredReferences.has(entry.referenceNumber)) {
+        entry.status = 'expired';
+        auditChanged = true;
+      }
+    });
+    if (auditChanged) {
+      const temporaryPath = `${verificationAuditPath}.tmp`;
+      await fs.writeFile(temporaryPath, `${JSON.stringify(audit, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+      await fs.rename(temporaryPath, verificationAuditPath);
+    }
+  };
+
+  const pending = letterDataWriteQueue.then(purge, purge);
+  letterDataWriteQueue = pending.catch(() => {});
+  return pending;
+}
+
+async function migrateLegacyLetterHistory() {
+  let history;
+  try {
+    history = await loadLetterHistory();
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+
+  if (!history.length) return;
+  const secureLetters = await readJsonArray(secureLettersPath, 'Secure letter storage');
+  const audit = await readJsonArray(verificationAuditPath, 'Verification audit');
+  const existingReferences = new Set(secureLetters.map((entry) => entry.referenceNumber));
+
+  for (const entry of history) {
+    if (typeof entry.referenceNumber !== 'string' || existingReferences.has(entry.referenceNumber)) continue;
+    const generatedAt = getLetterDate(entry) || new Date(0);
+    const expiresAt = new Date(generatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (expiresAt.getTime() > Date.now() && typeof entry.letter === 'string') {
+      try {
+        secureLetters.push({
+          referenceNumber: entry.referenceNumber,
+          createdAt: generatedAt.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          encryptedData: issuerAuth.encryptRetainedSensitive(JSON.stringify({
+            letter: entry.letter,
+            employeeName: entry.employeeName || '',
+            employerName: entry.employerName || '',
+            jobTitle: entry.jobTitle || '',
+            startDate: entry.startDate || '',
+            endDate: entry.endDate || '',
+            companyAddress: entry.companyAddress || ''
+          }))
+        });
+      } catch {
+        // Legacy letters without a configured encryption key are scrubbed below.
+      }
+    }
+    audit.push({
+      referenceNumber: entry.referenceNumber,
+      timestamp: generatedAt.toISOString(),
+      status: 'unverified_legacy'
+    });
+  }
+
+  const secureTemporaryPath = `${secureLettersPath}.tmp`;
+  await fs.writeFile(secureTemporaryPath, `${JSON.stringify(secureLetters, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  await fs.rename(secureTemporaryPath, secureLettersPath);
+  const auditTemporaryPath = `${verificationAuditPath}.tmp`;
+  await fs.writeFile(auditTemporaryPath, `${JSON.stringify(audit, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  await fs.rename(auditTemporaryPath, verificationAuditPath);
+  await fs.writeFile(historyPath, '[]\n', { encoding: 'utf8', mode: 0o600 });
 }
 
 async function loadLetterHistory() {
@@ -187,15 +329,208 @@ function paymentStatusPage(title, message, paymentId = '') {
 
 // Allow server to read JSON from POST requests
 app.use(cors());
-app.use(express.json());
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '7mb' }));
 app.use(express.urlencoded({ extended: false }));
-
-// Serve static files (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname)));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  return next();
 });
+
+function isSameOriginRequest(req) {
+  const origin = req.get('origin');
+  if (!origin) return req.get('sec-fetch-site') !== 'cross-site';
+  try {
+    return new URL(origin).host === req.get('host');
+  } catch {
+    return false;
+  }
+}
+
+function requireSameOrigin(req, res) {
+  if (isSameOriginRequest(req)) return true;
+  res.status(403).json({ success: false, message: 'Cross-origin requests are not allowed.' });
+  return false;
+}
+
+function setIssuerSessionCookie(res, token) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_LIFETIME_MS / 1000)}${secure}`);
+}
+
+function clearIssuerSessionCookie(res) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
+}
+
+async function requireIssuerSession(req, res, next) {
+  try {
+    if (!isSameOriginRequest(req)) return res.status(403).json({ success: false, message: 'Cross-origin requests are not allowed.' });
+    req.issuerContext = await issuerAuth.getSession(req);
+    if (!req.issuerContext) return res.status(401).json({ success: false, message: 'Verified HR sign-in is required.' });
+    res.setHeader('Cache-Control', 'no-store');
+    return next();
+  } catch (error) {
+    console.error('Unable to validate HR session:', error);
+    return res.status(500).json({ success: false, message: 'Unable to validate issuer authorization.' });
+  }
+}
+
+function isValidReviewer(req) {
+  const authorization = req.get('authorization') || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  return issuerAuth.isValidReviewToken(token);
+}
+
+app.get(['/','/index.html'], async (req, res) => {
+  try {
+    const context = await issuerAuth.getSession(req);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.sendFile(path.join(__dirname, context ? 'index.html' : 'issuer.html'));
+  } catch (error) {
+    console.error('Unable to check issuer session:', error);
+    return res.status(503).send('Issuer authentication is unavailable. Please try again later.');
+  }
+});
+
+app.get('/issuer', (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
+
+app.get('/api/auth/session', async (req, res) => {
+  try {
+    const context = await issuerAuth.getSession(req);
+    if (!context) return res.status(401).json({ success: false, message: 'Sign-in required.' });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ success: true, ...context });
+  } catch (error) {
+    console.error('Unable to load issuer session:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load issuer session.' });
+  }
+});
+
+app.post('/api/employers', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  try {
+    await issuerAuth.registerEmployer(req.body || {}, req.ip);
+    return res.status(202).json({
+      success: true,
+      message: 'Check the corporate business email for a confirmation link. Business review is also required before letter issuance.'
+    });
+  } catch (error) {
+    const unavailable = /requires configured|requires DATA_ENCRYPTION_KEY|Unable to send/.test(error.message);
+    return res.status(unavailable ? 503 : 400).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/employers/confirm', async (req, res) => {
+  try {
+    const confirmed = await issuerAuth.confirmEmployerEmail(req.query.token);
+    return res.status(confirmed ? 200 : 400).type('html').send(confirmed
+      ? '<!doctype html><title>Email confirmed</title><h1>Corporate email confirmed</h1><p>The employer account is pending business review. Letters cannot be issued until review is complete.</p><a href="/issuer">Return to issuer sign-in</a>'
+      : '<!doctype html><title>Confirmation failed</title><h1>Confirmation link is invalid or expired.</h1><a href="/issuer">Return to issuer sign-in</a>');
+  } catch (error) {
+    console.error('Unable to confirm employer email:', error);
+    return res.status(500).send('Unable to confirm the employer email.');
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  try {
+    const challenge = await issuerAuth.beginSignIn(req.body?.email, req.body?.password, req.ip);
+    return res.json({ success: true, ...challenge, message: 'A one-time code was sent to the signatory corporate email.' });
+  } catch (error) {
+    const unavailable = /not configured/.test(error.message);
+    return res.status(unavailable ? 503 : 401).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/auth/otp', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  try {
+    const result = await issuerAuth.completeSignIn(req.body?.challengeId, req.body?.code);
+    setIssuerSessionCookie(res, result.token);
+    return res.json({ success: true, employer: result.employer, officer: result.officer });
+  } catch (error) {
+    return res.status(401).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/auth/logout', requireIssuerSession, (req, res) => {
+  issuerAuth.logout(req);
+  clearIssuerSessionCookie(res);
+  return res.json({ success: true });
+});
+
+app.post('/api/employers/officers', requireIssuerSession, async (req, res) => {
+  try {
+    const officer = await issuerAuth.addOfficer(req.issuerContext, req.body || {});
+    return res.status(201).json({ success: true, officer, message: 'The signatory can now sign in and verify their corporate email by one-time code.' });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/review/employers', async (req, res) => {
+  if (!isValidReviewer(req)) return res.status(401).json({ success: false, message: 'Business reviewer authorization required.' });
+  try {
+    const store = await issuerAuth.readStore();
+    return res.json(store.employers.filter((employer) => employer.status === 'pending_review').map((employer) => ({
+      id: employer.id,
+      legalName: employer.legalName,
+      businessEmail: employer.businessEmail,
+      domain: employer.domain,
+      businessAddress: employer.businessAddress,
+      businessPhone: employer.businessPhone,
+      signatories: employer.officers.map((officer) => ({
+        fullName: officer.fullName,
+        title: officer.title,
+        email: officer.email
+      })),
+      createdAt: employer.createdAt,
+      hasBusinessDocument: Boolean(employer.businessDocument)
+    })));
+  } catch (error) {
+    console.error('Unable to list employers pending review:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load employer review queue.' });
+  }
+});
+
+app.get('/api/review/employers/:id/document', async (req, res) => {
+  if (!isValidReviewer(req)) return res.status(401).json({ success: false, message: 'Business reviewer authorization required.' });
+  try {
+    const document = await issuerAuth.getBusinessDocument(req.params.id);
+    if (!document) return res.status(404).json({ success: false, message: 'No business document is available.' });
+    return res.json({ success: true, ...document });
+  } catch (error) {
+    console.error('Unable to decrypt employer review document:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load employer review document.' });
+  }
+});
+
+app.post('/api/review/employers/:id/approve', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  if (!isValidReviewer(req)) return res.status(401).json({ success: false, message: 'Business reviewer authorization required.' });
+  try {
+    const approved = await issuerAuth.approveEmployer(req.params.id);
+    return res.status(approved ? 200 : 409).json({ success: approved, message: approved ? 'Employer approved.' : 'Employer must confirm its email and be pending review.' });
+  } catch (error) {
+    console.error('Unable to approve employer:', error);
+    return res.status(500).json({ success: false, message: 'Unable to approve employer.' });
+  }
+});
+
+app.use('/api/review', (req, res, next) => {
+  if (!isValidReviewer(req)) return res.status(401).json({ success: false, message: 'Business reviewer authorization required.' });
+  return next();
+});
+
+app.use('/public', express.static(path.join(__dirname, 'public'), { dotfiles: 'deny' }));
+app.get('/issuer.js', (req, res) => res.sendFile(path.join(__dirname, 'issuer.js')));
+app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js')));
+app.get('/letter-pdf.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-pdf.js')));
+app.get('/BingSiteAuth.xml', (req, res) => res.sendFile(path.join(__dirname, 'BingSiteAuth.xml')));
+app.get('/googlefc80fd584f1dfdf2.html', (req, res) => res.sendFile(path.join(__dirname, 'googlefc80fd584f1dfdf2.html')));
 
 app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
@@ -205,18 +540,11 @@ app.get('/verify-page', (req, res) => {
   res.sendFile(path.join(__dirname, 'verify.html'));
 });
 
-app.get('/history', async (req, res) => {
-  try {
-    await historyWriteQueue;
-    return res.json(await loadLetterHistory());
-  } catch (error) {
-    console.error('Unable to read letter history:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Unable to read letter history'
-    });
-  }
-});
+app.get('/verify', (req, res) => res.sendFile(path.join(__dirname, 'verify.html')));
+
+app.use(['/history', '/send-email', '/admin'], (req, res) =>
+  res.status(404).json({ success: false, message: 'This legacy endpoint is disabled.' })
+);
 
 app.get('/lookup', async (req, res) => {
   const referenceNumber = typeof req.query.ref === 'string' ? req.query.ref.trim() : '';
@@ -228,21 +556,34 @@ app.get('/lookup', async (req, res) => {
   }
 
   try {
-    await historyWriteQueue;
-    const history = await loadLetterHistory();
-    const entry = history.find((item) => item.referenceNumber === referenceNumber);
+    await letterDataWriteQueue;
+    const audit = await readJsonArray(verificationAuditPath, 'Verification audit');
+    const entry = audit.find((item) => item.referenceNumber === referenceNumber);
     if (!entry) {
       return res.status(404).json({
         success: false,
         message: 'Reference not found'
       });
     }
-    return res.json(entry);
+    if (entry.status === 'unverified_legacy') {
+      return res.status(404).json({ success: false, message: 'This legacy reference is not verified.' });
+    }
+    return res.json({
+      success: true,
+      referenceNumber: entry.referenceNumber,
+      timestamp: entry.timestamp,
+      employerName: entry.employerName,
+      employerEmail: entry.employerEmail,
+      signatoryName: entry.signatoryName,
+      signatoryTitle: entry.signatoryTitle,
+      signatoryEmail: entry.signatoryEmail,
+      status: entry.status
+    });
   } catch (error) {
-    console.error('Unable to read letter history for lookup:', error);
+    console.error('Unable to read verification audit:', error);
     return res.status(500).json({
       success: false,
-      message: 'Unable to read letter history'
+      message: 'Unable to read verification status'
     });
   }
 });
@@ -546,9 +887,7 @@ app.get('/admin/stats', (req, res) => respondWithAdminHistory(res, 'stats', (his
   return { totalLetters: history.length, todayCount, last7DaysCount };
 }));
  
- app.get('/admin-page', (req, res) => {
-   res.sendFile(path.join(__dirname, 'admin.html'));
- });
+app.get('/admin-page', (req, res) => res.redirect('/issuer'));
 
 app.get('/admin/recent', (req, res) => respondWithAdminHistory(res, 'recent', (history) =>
   history
@@ -569,96 +908,116 @@ app.get('/admin/search', (req, res) => respondWithAdminHistory(res, 'search', (h
   );
 }));
 
-// Employment Verification Route
-app.post('/verify', async (req, res) => {
-  const {
-    employeeName,
-    employerName,
-    jobTitle,
-    startDate,
-    endDate,
-    companyAddress
-  } = req.body || {};
+app.post('/verify', (req, res) => res.status(401).json({
+  success: false,
+  message: 'Public letter generation is disabled. Verified HR sign-in is required.'
+}));
 
+app.post('/api/letters', requireIssuerSession, async (req, res) => {
   const normalizeText = (value) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
-  const employee = normalizeText(employeeName);
-  const employer = normalizeText(employerName);
-  const position = normalizeText(jobTitle);
-  const employmentStart = normalizeText(startDate);
-  const employmentEnd = normalizeText(endDate);
-  const address = normalizeText(companyAddress) || 'Not provided';
-
-  if (!employee || !employer || !position || !employmentStart) {
-    return res.status(400).json({
-      success: false,
-      message: "Missing required fields"
-    });
+  const employee = normalizeText(req.body?.employeeName);
+  const position = normalizeText(req.body?.jobTitle);
+  const employmentStart = normalizeText(req.body?.startDate);
+  const employmentEnd = normalizeText(req.body?.endDate);
+  const startTime = Date.parse(`${employmentStart}T00:00:00.000Z`);
+  const endTime = employmentEnd ? Date.parse(`${employmentEnd}T00:00:00.000Z`) : null;
+  if (!employee || employee.length > 160 || !position || position.length > 120 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(employmentStart) || !Number.isFinite(startTime) ||
+      (employmentEnd && (!/^\d{4}-\d{2}-\d{2}$/.test(employmentEnd) || !Number.isFinite(endTime) || endTime < startTime))) {
+    return res.status(400).json({ success: false, message: 'Employee name, position, and start date are required.' });
   }
 
   const generatedAt = new Date();
-  referenceSequence += 1;
-  const referenceNumber = `EV-${generatedAt.getUTCFullYear()}-${String(referenceSequence).padStart(4, '0')}`;
-  const timestamp = `${new Intl.DateTimeFormat('en-US', {
+  const timestamp = generatedAt.toISOString();
+  let referenceNumber;
+  try {
+    referenceNumber = await allocateReferenceNumber();
+  } catch (error) {
+    console.error('Unable to allocate a unique verification reference:', error);
+    return res.status(503).json({ success: false, message: 'Unable to allocate a verification reference.' });
+  }
+  const displayTimestamp = `${new Intl.DateTimeFormat('en-US', {
     dateStyle: 'long',
     timeStyle: 'short',
     timeZone: 'UTC'
   }).format(generatedAt)} UTC`;
+  const { employer, officer } = req.issuerContext;
+  const letter = `${employer.legalName.toUpperCase()}\n${employer.businessAddress}\n${employer.businessPhone} · ${employer.businessEmail}
 
-  const letter = `EMPLOYMENT VERIFICATION LETTER
+EMPLOYMENT VERIFICATION LETTER
 Reference Number: ${referenceNumber}
-Generated: ${timestamp}
+Generated: ${displayTimestamp}
 
 Employee Information
   Employee Name: ${employee}
 
 Employment Details
-  Employer: ${employer}
+  Employer: ${employer.legalName}
   Position: ${position}
-  Employment Period: ${employmentStart} - ${employmentEnd || 'Not provided'}
+  Employment Period: ${employmentStart} - ${employmentEnd || 'Current'}
 
-Company Information
-  Company Address: ${address}
+Authorized HR Signatory
+  ${officer.fullName}, ${officer.title}
+  ${officer.email}
 
 Closing Statement
-  This letter confirms the employment information stated above.
-  Please contact our office if further verification is required.
+  This letter is issued by an authenticated and verified employer representative.
+  Please use the reference number to confirm issuer and document status.
 `;
 
   try {
-    await appendLetterHistory({
-      referenceNumber,
-      timestamp,
+    const encryptedData = issuerAuth.encryptRetainedSensitive(JSON.stringify({
+      letter,
       employeeName: employee,
-      employerName: employer,
       jobTitle: position,
       startDate: employmentStart,
-      endDate: employmentEnd,
-      companyAddress: address,
-      letter
+      endDate: employmentEnd
+    }));
+    await appendJsonArray(secureLettersPath, 'Secure letter storage', 'secure', {
+      referenceNumber,
+      createdAt: timestamp,
+      expiresAt: new Date(generatedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      encryptedData
     });
+    await appendJsonArray(verificationAuditPath, 'Verification audit', 'audit', {
+      employerId: employer.id,
+      signatoryId: officer.id,
+      timestamp,
+      ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
+      referenceNumber,
+      employerName: employer.legalName,
+      employerEmail: employer.businessEmail,
+      signatoryName: officer.fullName,
+      signatoryTitle: officer.title,
+      signatoryEmail: officer.email,
+      status: 'verified'
+    });
+    return res.json({ success: true, letter, referenceNumber, timestamp });
   } catch (error) {
-    console.error('Unable to save letter history:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Unable to save verification letter history'
-    });
+    console.error('Unable to securely save verification letter:', error);
+    return res.status(503).json({ success: false, message: 'Secure letter storage is unavailable; no letter was issued.' });
   }
-
-  res.json({
-    success: true,
-    letter,
-    referenceNumber,
-    timestamp
-  });
 });
 
 // Initialize local ledgers before accepting traffic.
 async function startServer() {
+  if (process.env.NODE_ENV === 'production' && !process.env.DATA_DIR) {
+    throw new Error('DATA_DIR must point to durable private storage in production.');
+  }
   await fs.mkdir(dataDirectory, { recursive: true });
   await Promise.all([
     ensureJsonArrayFile(historyPath),
-    ensureJsonArrayFile(paymentsPath)
+    ensureJsonArrayFile(paymentsPath),
+    ensureJsonArrayFile(secureLettersPath),
+    ensureJsonArrayFile(verificationAuditPath),
+    issuerAuth.initialize()
   ]);
+  await migrateLegacyLetterHistory();
+  await purgeExpiredEmployeeData();
+  const retentionInterval = setInterval(() => {
+    purgeExpiredEmployeeData().catch((error) => console.error('Sensitive-data retention purge failed:', error));
+  }, 60 * 60 * 1000);
+  retentionInterval.unref();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);

@@ -91,6 +91,7 @@
         border-top: 3px solid #176b55;
         background: #fff;
         color: #1f2937;
+        white-space: pre-line;
       }
       #output:empty {
         display: none;
@@ -123,9 +124,6 @@
         padding-left: 16px;
         line-height: 1.6;
       }
-      #downloadPdfButton {
-        margin-top: 10px;
-      }
       .back-link {
         display: inline-block;
         margin-top: 22px;
@@ -144,7 +142,6 @@
       }
     </style>
     <link rel="stylesheet" href="/public/brand.css" />
-    <script src="/letter-pdf.js" defer></script>
     <script src="/script.js" defer></script>
   </head>
   <body>
@@ -164,7 +161,6 @@
       </form>
       <section aria-live="polite" aria-label="Verification result">
         <div id="output" class="letter-document"></div>
-        <button id="downloadPdfButton" type="button" disabled>Download PDF</button>
       </section>
       <a class="back-link" href="/">Back to Employment Verification USA</a>
     </main>

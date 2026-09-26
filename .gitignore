@@ -5,4 +5,7 @@ node_modules/
 public/launch-config.js
 letter_history.json
 payments.json
+issuer_accounts.json
+secure_letters.json
+verification_audit.json
 *.tmp

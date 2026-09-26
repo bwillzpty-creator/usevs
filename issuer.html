@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Employer Sign-In | Employment Verification USA</title>
+    <link rel="stylesheet" href="/public/brand.css" />
+    <style>
+      :root { color-scheme: light; --ink: #1f2937; --muted: #617078; --line: #d7e0e2; --green: #176b55; --canvas: #f3f6f5; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px Arial, sans-serif; }
+      header, main, footer { width: min(100% - 32px, 980px); margin-inline: auto; }
+      header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+      .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+      .brand img { width: 40px; height: 40px; }
+      .brand span { display: grid; gap: 4px; }
+      .brand small { color: var(--muted); font-size: 10px; font-weight: 700; }
+      header > a:last-child { color: var(--green); font-weight: 700; text-decoration: none; }
+      main { padding: 36px 0 52px; }
+      h1 { margin: 0; font-size: 30px; }
+      .intro { max-width: 680px; margin: 10px 0 28px; color: var(--muted); line-height: 1.6; }
+      .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px; align-items: start; }
+      section { min-width: 0; padding: 24px; border: 1px solid var(--line); background: #fff; }
+      h2 { margin: 0 0 18px; font-size: 19px; }
+      form { display: grid; gap: 12px; }
+      label { display: grid; gap: 6px; font-weight: 700; }
+      input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b8c5c9; border-radius: 3px; background: #fff; color: var(--ink); font: inherit; }
+      input[type=file] { padding: 7px; }
+      button { min-height: 42px; padding: 10px 14px; border: 0; border-radius: 3px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      button:disabled { opacity: .65; cursor: wait; }
+      .hint, .status { color: var(--muted); font-size: 13px; line-height: 1.5; }
+      .status { min-height: 20px; margin: 0; }
+      .status.error { color: #a12828; }
+      .otp-form { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+      footer { padding: 18px 0 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+      @media (max-width: 700px) { header { align-items: flex-start; padding: 15px 0; } header > a:last-child { padding-top: 11px; } main { padding-top: 22px; } .columns { grid-template-columns: 1fr; gap: 18px; } section { padding: 19px; } }
+    </style>
+    <script src="/issuer.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/landing">
+        <img src="/public/us-evs-mark.svg" alt="" />
+        <span><strong>Employment Verification USA</strong><small>VERIFIED EMPLOYER ACCESS</small></span>
+      </a>
+      <a href="/landing">Back to site</a>
+    </header>
+    <main>
+      <h1>Employer and HR sign-in</h1>
+      <p class="intro">Letter issuance is restricted to corporate accounts that have confirmed their email and completed business review. HR signatories verify each sign-in with a one-time code sent to their corporate email.</p>
+      <div class="columns">
+        <section aria-labelledby="loginHeading">
+          <h2 id="loginHeading">Sign in</h2>
+          <form id="loginForm">
+            <label for="loginEmail">HR corporate email</label>
+            <input id="loginEmail" name="email" type="email" autocomplete="username" required />
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+            <button type="submit">Email a sign-in code</button>
+            <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
+          </form>
+          <form id="otpForm" class="otp-form" hidden>
+            <label for="loginCode">Six-digit email code</label>
+            <input id="loginCode" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+            <button type="submit">Verify and continue</button>
+            <p id="otpStatus" class="status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+        <section aria-labelledby="registerHeading">
+          <h2 id="registerHeading">Register an employer</h2>
+          <form id="employerForm">
+            <label for="legalBusinessName">Legal business name</label>
+            <input id="legalBusinessName" name="legalBusinessName" autocomplete="organization" required />
+            <label for="businessAddress">Business street address</label>
+            <input id="businessAddress" name="businessAddress" autocomplete="street-address" required />
+            <label for="businessPhone">Main business phone</label>
+            <input id="businessPhone" name="businessPhone" type="tel" autocomplete="tel" required />
+            <label for="businessEmail">Corporate business email</label>
+            <input id="businessEmail" name="businessEmail" type="email" autocomplete="email" required />
+            <label for="officerName">Initial HR signatory full name</label>
+            <input id="officerName" name="officerName" autocomplete="name" required />
+            <label for="officerTitle">Signatory title</label>
+            <input id="officerTitle" name="officerTitle" required />
+            <label for="officerEmail">Signatory corporate email</label>
+            <input id="officerEmail" name="officerEmail" type="email" autocomplete="email" required />
+            <label for="officerPassword">Signatory password (12+ characters)</label>
+            <input id="officerPassword" name="officerPassword" type="password" minlength="12" autocomplete="new-password" required />
+            <label for="businessDocument">Optional business document (PDF, PNG, or JPEG; max 5 MB)</label>
+            <input id="businessDocument" name="businessDocument" type="file" accept="application/pdf,image/png,image/jpeg" />
+            <p class="hint">Business and signatory emails must use the same corporate domain. Consumer email providers are not accepted. Email confirmation and independent business review are required before letters can be issued.</p>
+            <button type="submit">Create employer account</button>
+            <p id="registrationStatus" class="status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+    </main>
+    <footer>Employer accounts remain pending until business identity review is complete. Employee details are encrypted and deleted after 30 days.</footer>
+  </body>
+</html>
