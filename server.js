@@ -317,7 +317,7 @@ app.post('/payfast/initiate', async (req, res) => {
     'PAYFAST_NOTIFY_URL'
   ];
   const missingSettings = requiredSettings.filter((name) => !process.env[name]);
-  if (!Number.isFinite(amount) || amount < 5) missingSettings.push(amountSetting);
+  if (!Number.isFinite(amount) || amount < 4.99) missingSettings.push(amountSetting);
   if (paymentType === 'subscription' && !process.env.PAYFAST_PASSPHRASE) {
     missingSettings.push('PAYFAST_PASSPHRASE');
   }

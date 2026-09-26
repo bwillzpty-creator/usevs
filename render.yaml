@@ -20,6 +20,6 @@ services:
       - key: PAYFAST_NOTIFY_URL
         value: https://usevs.onrender.com/payfast/notify
       - key: PAYFAST_ONCE_OFF_AMOUNT
-        value: "49.00"
+        value: "4.99"
       - key: PAYFAST_SUBSCRIPTION_AMOUNT
-        value: "199.00"
+        value: "24.99"

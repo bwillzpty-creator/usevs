@@ -28,8 +28,8 @@ function hasLivePayFastConfiguration(environment) {
 
   return requiredValues.slice(0, 3).every(Boolean) &&
     hasHttpsCallbacks &&
-    Number.isFinite(onceOffAmount) && onceOffAmount >= 5 &&
-    Number.isFinite(subscriptionAmount) && subscriptionAmount >= 5;
+    Number.isFinite(onceOffAmount) && onceOffAmount >= 4.99 &&
+    Number.isFinite(subscriptionAmount) && subscriptionAmount >= 4.99;
 }
 
 function writeLaunchConfig(environment = process.env) {
