@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Employment Verification USA, US-EVS (US Employment Verification System): Instant Employment Verification for the United States." />
     <meta name="application-name" content="Employment Verification USA" />
-    <link rel="canonical" href="https://usevs.onrender.com/landing" />
+    <link rel="canonical" href="https://usevs.railway.app/landing" />
     <title>Employment Verification USA | US-EVS (US Employment Verification System)</title>
     <link rel="stylesheet" href="/public/brand.css" />
     <script src="/public/launch-config.js" defer></script>
@@ -446,6 +446,22 @@
       .footer-links a {
         color: #e5eeea;
       }
+      .footer-legal {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px 24px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(229, 238, 234, 0.24);
+      }
+      .footer-legal p {
+        margin: 0;
+        color: #c5d9d1;
+        font-size: 11px;
+        line-height: 1.6;
+      }
       @media (max-width: 850px) {
         .hero-inner {
           grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
@@ -697,13 +713,23 @@
       <div class="shell footer-inner">
         <div class="footer-brand">
           <img src="/public/us-evs-mark.svg" alt="" />
-          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://usevs.onrender.com">usevs.onrender.com</a></small></div>
+          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://usevs.railway.app">usevs.railway.app</a></small></div>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
           <a href="/">Create a letter</a>
           <a href="/verify-page">Verify a letter</a>
           <a href="/admin-page">Admin dashboard</a>
         </nav>
+        <div class="footer-legal">
+          <p>&copy; 2026 Employment Verification USA &middot; BWILLNEXUS Systems<br />Email: bwillnexus@gmail.com<br />All rights reserved.</p>
+          <nav class="footer-links" aria-label="Legal and support links">
+            <a href="/public/terms-and-conditions.html">Terms and Conditions</a>
+            <a href="/public/privacy-policy.html">Privacy Policy</a>
+            <a href="/public/refund-and-cancellation-policy.html">Refund and Cancellation Policy</a>
+            <a href="/public/digital-delivery-policy.html">Digital Delivery Policy</a>
+            <a href="/public/contact-support.html">Contact / Support</a>
+          </nav>
+        </div>
       </div>
     </footer>
   </body>

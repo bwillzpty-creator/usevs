@@ -10,8 +10,10 @@ const { createPdfBuffer } = require('./letter-pdf');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 
 const app = express();
-const PORT = Number(process.env.PORT) || 5000;
-const dataDirectory = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
+const PORT = Number(process.env.PORT) || 8080;
+const dataDirectory = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : process.env.NODE_ENV === 'production' ? '/var/data/usevs' : __dirname;
 const historyPath = path.join(dataDirectory, 'letter_history.json');
 const paymentsPath = path.join(dataDirectory, 'payments.json');
 const secureLettersPath = path.join(dataDirectory, 'secure_letters.json');
@@ -1001,9 +1003,6 @@ Closing Statement
 
 // Initialize local ledgers before accepting traffic.
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && !process.env.DATA_DIR) {
-    throw new Error('DATA_DIR must point to durable private storage in production.');
-  }
   await fs.mkdir(dataDirectory, { recursive: true });
   await Promise.all([
     ensureJsonArrayFile(historyPath),
