@@ -11,6 +11,7 @@
   --brand-green: #38bdf8;
   --brand-green-dark: #0ea5e9;
   --brand-rust: #94a3b8;
+  --brand-orange: #F97316;
 }
 
 html {
@@ -283,6 +284,12 @@ tbody tr:hover {
   border-color: var(--brand-steel) !important;
   background-color: #164e63 !important;
   color: #e0f2fe !important;
+}
+
+.sample-stamp {
+  border-color: var(--brand-orange) !important;
+  background-color: var(--brand-orange) !important;
+  color: #ffffff !important;
 }
 
 .result-status {
