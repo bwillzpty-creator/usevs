@@ -11,6 +11,7 @@ const { DatabaseSync } = require('node:sqlite');
 const QRCode = require('qrcode');
 const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx');
 const { createPdfBuffer } = require('./letter-pdf');
+const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 
 const app = express();
@@ -673,6 +674,7 @@ app.use('/public', express.static(path.join(__dirname, 'public'), { dotfiles: 'd
 app.get('/issuer.js', (req, res) => res.sendFile(path.join(__dirname, 'issuer.js')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js')));
 app.get('/letter-pdf.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-pdf.js')));
+app.get('/letter-template.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-template.js')));
 app.get('/BingSiteAuth.xml', (req, res) => res.sendFile(path.join(__dirname, 'BingSiteAuth.xml')));
 app.get('/googlefc80fd584f1dfdf2.html', (req, res) => res.sendFile(path.join(__dirname, 'googlefc80fd584f1dfdf2.html')));
 
@@ -1167,18 +1169,16 @@ function createWordDocument(record, qrBuffer) {
       spacing: { after: 100 }
     }));
   }
-  content.push(new Paragraph({
-    children: [
-      new TextRun({ text: 'Scan to verify document authenticity  ', size: 16 }),
-      new ImageRun({ data: qrBuffer, transformation: { width: 100, height: 100 } })
-    ],
-    spacing: { before: 180 }
-  }));
   const document = new Document({
     styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
     sections: [{
       properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
-      footers: { default: new Footer({ children: [new Paragraph({ children: [new TextRun({ text: `US-EVS · ${record.referenceNumber}`, size: 16 })] })] }) },
+      footers: { default: new Footer({ children: [new Paragraph({
+        children: [
+          new TextRun({ text: `US-EVS · ${record.referenceNumber} · Scan to verify authenticity  `, size: 16 }),
+          new ImageRun({ data: qrBuffer, transformation: { width: 60, height: 60 } })
+        ]
+      })] }) },
       children: content
     }]
   });
@@ -1399,9 +1399,27 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
   const basePay = money(body.basePay, 'base pay rate');
   const ytdGross = money(body.ytdGross, 'YTD earnings');
   const bonus = money(body.bonus, 'bonus amount');
-  const paragraphOne = `This statement provides official employment verification for ${employee}. ${employee} ${lifecycle === 'Former Employee' ? 'held' : 'holds'} the position of ${position} within ${department}, having commenced active service on ${employmentStart}. Employment status is classified as ${workStatus}.${lifecycle === 'Former Employee' ? ` Separation occurred on ${employmentEnd}. Rehire eligibility status is recorded as ${rehireEligibility}.` : ''}`;
-  const paragraphTwo = `Compensation records reflect a base pay rate of ${basePay} paid on a ${payFrequency} schedule, with average weekly hours recorded at ${avgHours}. Year-to-date gross earnings stand at ${ytdGross}, with additional annual variable pay recorded at ${bonus}. Overtime eligibility is marked as ${overtimeEligible}.`;
-  const paragraphThree = `This document is issued for ${purpose} purposes. Information provided reflects company records. For independent verification or administrative questions, contact ${officer.fullName} directly at ${representativePhone} or ${officer.email}. Verification Reference: ${referenceNumber}.`;
+  const [paragraphOne, paragraphTwo, paragraphThree] = createVerificationParagraphs({
+    employeeName: employee,
+    jobTitle: position,
+    departmentName: department,
+    startDate: employmentStart,
+    workStatus,
+    lifecycle,
+    endDate: employmentEnd,
+    rehireEligibility,
+    baseSalary: basePay,
+    payFrequency,
+    averageHours: avgHours,
+    ytdEarnings: ytdGross,
+    bonusAmount: bonus,
+    overtimeEligibility: overtimeEligible,
+    verificationPurpose: purpose,
+    representativeName: officer.fullName,
+    representativePhone,
+    representativeEmail: officer.email,
+    documentId: referenceNumber
+  });
   const disclaimer = body.liabilityDisclaimer === true
     ? 'Information provided reflects company records at the time of issuance and does not constitute a guarantee of future employment or compensation.'
     : '';

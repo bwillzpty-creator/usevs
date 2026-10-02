@@ -41,11 +41,32 @@
       value("employerPhone", "Business phone"),
       value("employerEmail", "HR email")
     ].join(" · "));
-    setText("paragraphOne", `This statement provides official employment verification for ${employee}. ${employee} ${former ? "held" : "holds"} the position of ${jobTitle} within ${department}, having commenced active service on ${startDate}. Employment status is classified as ${workStatus}.${former ? ` Separation occurred on ${endDate || "the recorded separation date"}. Rehire eligibility status is recorded as ${value("rehireEligibility", "Conditional")}.` : ""}`);
+    const paragraphs = window.LetterTemplate.createVerificationParagraphs({
+      employeeName: employee,
+      jobTitle,
+      departmentName: department,
+      startDate,
+      workStatus,
+      lifecycle,
+      endDate: endDate || "the recorded separation date",
+      rehireEligibility: value("rehireEligibility", "Conditional"),
+      baseSalary: pay,
+      payFrequency: value("payFrequency", "pay"),
+      averageHours: hours,
+      ytdEarnings: ytd,
+      bonusAmount: bonus,
+      overtimeEligibility: form.elements.overtimeEligible.value,
+      verificationPurpose: purpose,
+      representativeName: representative,
+      representativePhone,
+      representativeEmail,
+      documentId: currentReference || "assigned at issuance"
+    });
+    setText("paragraphOne", paragraphs[0]);
     const ssnLast4 = value("ssnLast4", "");
     setText("ssnPreview", ssnLast4 ? `SSN: ${document.getElementById("redactSsn").checked ? "[REDACTED]" : `XXX-XX-${ssnLast4}`}` : "");
-    setText("paragraphTwo", `Compensation records reflect a base pay rate of ${pay} paid on a ${value("payFrequency", "pay")} schedule, with average weekly hours recorded at ${hours}. Year-to-date gross earnings stand at ${ytd}, with additional annual variable pay recorded at ${bonus}. Overtime eligibility is marked as ${form.elements.overtimeEligible.value}.`);
-    setText("paragraphThree", `This document is issued for ${purpose} purposes. Information provided reflects company records. For independent verification or administrative questions, contact ${representative} directly at ${representativePhone} or ${representativeEmail}. Verification Reference: ${currentReference || "assigned at issuance"}.`);
+    setText("paragraphTwo", paragraphs[1]);
+    setText("paragraphThree", paragraphs[2]);
     setText("previewMeta", currentReference ? `Document ID: ${currentReference} · ${new Date().toLocaleDateString()}` : "Document ID assigned at issuance");
     document.getElementById("sealPreview").hidden = !document.getElementById("corporateSeal").checked;
     setText("previewRepresentative", representative);
