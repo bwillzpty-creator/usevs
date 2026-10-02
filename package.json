@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "Employment verification app",
   "main": "server.js",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "postinstall": "node scripts/write-launch-config.js",
     "prestart": "node scripts/write-launch-config.js",
-    "start": "node server.js",
+    "start": "node --experimental-sqlite server.js",
     "predev": "node scripts/write-launch-config.js",
-    "dev": "node server.js",
+    "dev": "node --experimental-sqlite server.js",
     "test": "node --test"
   },
   "keywords": [
@@ -18,8 +21,10 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.6",
+    "docx": "^9.8.1",
     "dotenv": "^18.0.4",
     "express": "^4.19.2",
-    "nodemailer": "^10.0.10"
+    "nodemailer": "^10.0.10",
+    "qrcode": "^1.5.4"
   }
 }

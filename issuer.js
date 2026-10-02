@@ -67,7 +67,7 @@ otpForm.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challengeId: loginChallengeId, code: otpForm.elements.code.value })
     });
-    window.location.assign('/');
+    window.location.assign('/verify');
   } catch (error) {
     showMessage(otpStatus, error.message, true);
     otpForm.elements.code.value = '';
@@ -111,5 +111,5 @@ document.getElementById('employerForm').addEventListener('submit', async (event)
 });
 
 requestJson('/api/auth/session').then(() => {
-  window.location.replace('/');
+  window.location.replace('/verify');
 }).catch(() => {});

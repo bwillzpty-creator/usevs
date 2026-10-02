@@ -9,7 +9,7 @@
       :root { color-scheme: light; --ink: #1f2937; --muted: #617078; --line: #d7e0e2; --green: #176b55; --canvas: #f3f6f5; }
       * { box-sizing: border-box; }
       body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px Arial, sans-serif; }
-      header, main, footer { width: min(100% - 32px, 980px); margin-inline: auto; }
+      header, main, footer { width: min(100% - 32px, 1120px); margin-inline: auto; }
       header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
       .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
       .brand img { width: 40px; height: 40px; }
@@ -24,9 +24,9 @@
       h2 { margin: 0 0 18px; font-size: 19px; }
       form { display: grid; gap: 12px; }
       label { display: grid; gap: 6px; font-weight: 700; }
-      input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b8c5c9; border-radius: 3px; background: #fff; color: var(--ink); font: inherit; }
+      input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #b8c5c9; border-radius: 3px; background: #fff; color: var(--ink); font: inherit; }
       input[type=file] { padding: 7px; }
-      button { min-height: 42px; padding: 10px 14px; border: 0; border-radius: 3px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      button { min-height: 44px; padding: 10px 14px; border: 0; border-radius: 3px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
       button:disabled { opacity: .65; cursor: wait; }
       .hint, .status { color: var(--muted); font-size: 13px; line-height: 1.5; }
       .status { min-height: 20px; margin: 0; }
@@ -37,17 +37,19 @@
       .footer-legal p { margin: 0; line-height: 1.6; }
       .footer-links { display: flex; flex-wrap: wrap; gap: 8px 16px; }
       .footer-links a { color: var(--green); }
-      @media (max-width: 700px) { header { align-items: flex-start; padding: 15px 0; } header > a:last-child { padding-top: 11px; } main { padding-top: 22px; } .columns { grid-template-columns: 1fr; gap: 18px; } section { padding: 19px; } }
+      @media (min-width: 1280px) { header, main, footer { width: min(1120px, calc(100% - 64px)); } .columns { gap: 42px; } }
+      @media (max-width: 900px) { header { align-items: flex-start; padding: 15px 0; } header > a:last-child { padding-top: 11px; } main { padding-top: 22px; } .columns { grid-template-columns: 1fr; gap: 18px; } section { padding: 19px; } }
+      @media (max-width: 380px) { header, main, footer { width: calc(100% - 24px); } header { gap: 8px; } header > a:last-child { font-size: 13px; } h1 { font-size: 25px; } section { padding: 15px; } }
     </style>
     <script src="/issuer.js" defer></script>
   </head>
   <body>
     <header>
-      <a class="brand" href="/landing">
+      <a class="brand" href="/">
         <img src="/public/us-evs-mark.svg" alt="" />
         <span><strong>Employment Verification USA</strong><small>VERIFIED EMPLOYER ACCESS</small></span>
       </a>
-      <a href="/landing">Back to site</a>
+      <a href="/">Back to site</a>
     </header>
     <main>
       <h1>Employer and HR sign-in</h1>

@@ -8,4 +8,7 @@ payments.json
 issuer_accounts.json
 secure_letters.json
 verification_audit.json
+usevs.sqlite
+usevs.sqlite-shm
+usevs.sqlite-wal
 *.tmp

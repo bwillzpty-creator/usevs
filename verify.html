@@ -1,187 +1,144 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Verify Letter | Employment Verification USA | US-EVS (US Employment Verification System)</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-        background: #f5f7fb;
-        color: #1f2937;
-      }
-      main {
-        max-width: 680px;
-        margin: 0 auto;
-        padding: 24px;
-        border-radius: 8px;
-        background: white;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      }
-      h1 {
-        margin-top: 0;
-      }
-      .page-nav {
-        max-width: 728px;
-        margin: 0 auto 22px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-      }
-      .brand-lockup {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        color: #1f2937;
-        text-decoration: none;
-      }
-      .brand-lockup img {
-        width: 40px;
-        height: 40px;
-      }
-      .brand-lockup span {
-        display: grid;
-        gap: 3px;
-      }
-      .brand-lockup small {
-        color: #64727b;
-        font-size: 10px;
-        font-weight: 700;
-      }
-      .page-nav > a:last-child {
-        color: #176b55;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .page-nav .brand-lockup strong {
-        font-size: 13px;
-      }
-      form {
-        display: grid;
-        gap: 14px;
-      }
-      label {
-        display: grid;
-        gap: 6px;
-        font-weight: 600;
-      }
-      input,
-      button {
-        box-sizing: border-box;
-        padding: 10px 12px;
-        font: inherit;
-      }
-      button {
-        border: 0;
-        border-radius: 4px;
-        background: #176b55;
-        color: white;
-        cursor: pointer;
-      }
-      button:disabled {
-        cursor: wait;
-        opacity: 0.7;
-      }
-      #output {
-        margin-top: 20px;
-        padding: 24px;
-        border: 1px solid #d7dde2;
-        border-top: 3px solid #176b55;
-        background: #fff;
-        color: #1f2937;
-        white-space: pre-line;
-      }
-      #output:empty {
-        display: none;
-      }
-      .letter-title {
-        margin: 0 0 12px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid #d7dde2;
-        font-size: 17px;
-        font-weight: 700;
-        text-align: center;
-      }
-      .letter-meta {
-        margin: 4px 0;
-        color: #52616b;
-        font-size: 11px;
-        text-align: center;
-      }
-      .letter-section-title {
-        margin: 22px 0 8px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #e4e8eb;
-        color: #176b55;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-      .letter-line {
-        margin: 7px 0;
-        padding-left: 16px;
-        line-height: 1.6;
-      }
-      .back-link {
-        display: inline-block;
-        margin-top: 22px;
-        color: #176b55;
-      }
-      .footer-legal { display: grid; gap: 10px; }
-      .footer-legal p { margin: 0; line-height: 1.6; }
-      .footer-links { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-      @media (max-width: 600px) {
-        body {
-          margin: 16px;
-        }
-        main {
-          padding: 18px;
-        }
-        #output {
-          padding: 18px;
-        }
-      }
-    </style>
-    <link rel="stylesheet" href="/public/brand.css" />
-    <script src="/script.js" defer></script>
-  </head>
-  <body>
-    <header class="page-nav">
-      <a class="brand-lockup" href="/landing">
-        <img src="/public/us-evs-mark.svg" alt="" />
-        <span><strong>Employment Verification USA</strong><small>US-EVS · US Employment Verification System</small></span>
-      </a>
-      <a href="/landing">Back to Landing Page</a>
-    </header>
-    <main>
-      <h1>Verify Employment Letter</h1>
-      <form id="lookupForm">
-        <label for="referenceNumber">Reference number</label>
-        <input id="referenceNumber" name="referenceNumber" autocomplete="off" required />
-        <button type="submit">Verify Letter</button>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create an official US-EVS employment verification letter.">
+  <title>Create Verification Letter | US-EVS</title>
+  <link rel="stylesheet" href="/public/brand.css">
+  <style>
+    :root{--navy:#12233f;--navy2:#1c3558;--ink:#17243a;--muted:#68768a;--line:#dbe2eb;--canvas:#f2f5f9;--silver:#8795a8;--accent:#315c91}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:14px Arial,sans-serif}
+    header{height:68px;padding:0 max(22px,calc((100vw - 1440px)/2));display:flex;align-items:center;justify-content:space-between;background:var(--navy);color:white}
+    .brand{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}.brand img{width:38px;height:38px}.brand span{display:grid;gap:3px}.brand small{color:#bdcada;font-size:10px}
+    header nav{display:flex;gap:20px}header nav a{color:#e3eaf3;text-decoration:none;font-size:13px}
+    main{width:min(1440px,calc(100% - 40px));margin:28px auto 54px}.heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:22px}.heading h1{margin:0;font-size:26px}.heading p{margin:7px 0 0;color:var(--muted)}
+    .mobile-preview-trigger{display:none;padding:9px 12px;border:1px solid var(--navy2);border-radius:4px;background:#fff;color:var(--navy2);font-weight:700}
+    .notice{padding:12px 15px;border:1px solid #e7d5ae;background:#fff9e9;color:#614c23;line-height:1.5;margin-bottom:18px}.notice a{color:#214d80;font-weight:700}
+    .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:22px;align-items:start}.form-column{display:grid;gap:15px}.card,.preview-card{border:1px solid var(--line);border-radius:8px;background:white;box-shadow:0 5px 20px #1628450a}
+    fieldset{margin:0;padding:20px;border:0;border-bottom:1px solid var(--line)}fieldset:last-child{border-bottom:0}legend{float:left;width:100%;margin:0 0 17px;padding:0;color:var(--navy);font-size:15px;font-weight:700}legend+*{clear:both}
+    .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:grid;align-content:start;gap:6px;min-width:0}.field.wide{grid-column:1/-1}.field label,.field>span{font-size:12px;font-weight:700;color:#39475c}
+    input,select,textarea{width:100%;min-height:44px;padding:9px 10px;border:1px solid #cbd4e0;border-radius:4px;background:white;color:var(--ink);font:inherit}textarea{min-height:70px;resize:vertical}input[type=file]{padding:7px;font-size:12px}input[type=checkbox],input[type=radio]{width:20px;min-height:20px;accent-color:var(--accent)}.inline{display:flex;flex-wrap:wrap;gap:10px 14px}.inline label{display:flex;align-items:center;gap:7px;min-height:44px;padding:3px;font-weight:500}.helper{margin:0;color:var(--muted);font-size:11px;line-height:1.45}
+    .signature-tabs{display:flex;gap:14px;margin-bottom:12px}.signature-panel{padding:12px;border:1px solid var(--line);background:#fbfcfe}.signature-panel[hidden]{display:none}.canvas-wrap{position:relative}.canvas-wrap canvas{display:block;width:100%;height:130px;border:1px dashed #9baabd;background:white;touch-action:none}.canvas-clear{position:absolute;right:8px;top:8px;min-height:44px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);padding:8px 12px}
+    .primary{min-height:44px;padding:10px 15px;border:0;border-radius:4px;background:var(--navy2);color:white;font-weight:700;cursor:pointer}.primary:disabled{opacity:.55;cursor:wait}.form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:18px 20px}.status{flex:1 1 180px;margin:0;color:var(--muted);font-size:12px}
+    .preview-card{position:sticky;top:16px;overflow:hidden}.preview-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--navy);color:white}.preview-head strong{font-size:13px}.preview-head button{display:none;min-height:44px;border:1px solid #9eabc0;border-radius:3px;padding:8px 12px;background:transparent;color:white}
+    .paper{position:relative;min-height:640px;margin:16px;padding:38px 34px;border:1px solid #e2e5e9;background:white;color:#222;font:14px/1.7 Arial,sans-serif;box-shadow:0 5px 16px #17243a0d}.paper .paper-brand{padding-bottom:17px;border-bottom:2px solid var(--navy);text-align:center}.paper-brand strong{display:block;color:var(--navy);font-size:17px}.paper-brand span{color:#627087;font-size:11px}.paper h2{margin:20px 0;text-align:center;font-size:16px}.paper p{margin:12px 0}.paper .paper-meta{color:#5c6878;font-size:11px;text-align:center}.paper .seal{position:absolute;top:90px;right:30px;width:82px;height:82px;display:grid;place-items:center;border:2px double #64748b;border-radius:50%;color:#42536d;font-size:9px;font-weight:700;text-align:center;transform:rotate(12deg)}.paper .signature{margin-top:28px;color:#17243a}.paper .signature img{display:block;max-width:190px;max-height:70px;object-fit:contain}.paper .script{font:italic 26px cursive;color:#233b5d}.paper .qr{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:10px}.paper .qr img{width:68px;height:68px}.export-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 16px 16px}.export-actions button,.export-actions a{min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid var(--navy2);border-radius:4px;background:white;color:var(--navy2);font-weight:700;text-decoration:none;cursor:pointer}.export-actions button:disabled{opacity:.4;cursor:not-allowed}
+    .paper .seal[hidden]{display:none}
+    .attachments-note{color:var(--muted);font-size:11px}.app-footer{padding:20px 28px;background:#fff}
+    @media(min-width:1280px){main{width:min(1440px,calc(100% - 64px))}.layout{gap:26px}.form-column{gap:18px}}
+    @media(min-width:768px) and (max-width:1023px){main{width:calc(100% - 32px)}.layout{gap:16px}.paper{margin:12px;padding:28px 24px}}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.mobile-preview-trigger{display:block}.preview-card{position:fixed;z-index:10;inset:10vh 12px 12px;display:none;overflow:auto}.preview-card.open{display:block}.preview-head button{display:block}}
+    @media(max-width:620px){header{height:auto;min-height:64px;padding:10px 16px;flex-wrap:wrap}header nav{width:100%;justify-content:space-between;gap:10px;padding-top:7px;border-top:1px solid #ffffff28}header nav a{font-size:12px}main{width:calc(100% - 24px);margin-top:20px}.heading{align-items:start;flex-direction:column}.heading h1{font-size:22px}.fields{grid-template-columns:1fr}.field.wide{grid-column:auto}fieldset{padding:16px}.paper{margin:8px;padding:25px 20px;min-height:550px}.preview-head{position:sticky;top:0;z-index:1}}
+    @media(max-width:360px){header{padding-inline:12px}.brand img{width:32px;height:32px}header nav{gap:7px}main{width:calc(100% - 20px)}.heading h1{font-size:20px}.paper{padding:20px 15px}}
+    @media print{body{background:white}.form-column,header,.heading,.notice,.preview-head,.export-actions,.app-footer{display:none!important}.layout{display:block}.preview-card{position:static;border:0;box-shadow:none}.paper{margin:0;border:0;box-shadow:none;min-height:0}}
+  </style>
+  <script src="/verify-app.js" defer></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a>
+    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/lookup">Verify ID</a><a href="/dashboard">History</a></nav>
+  </header>
+  <main>
+    <div class="heading"><div><h1>Create an employment verification letter</h1><p>Complete the verified employer and employee record. Preview updates as you work.</p></div><button type="button" class="mobile-preview-trigger" id="openPreviewTop">Preview letter</button><a href="/issuer">Employer sign-in</a></div>
+    <div class="notice" id="authNotice">Document issuance requires a verified HR sign-in. You can complete and preview the form first; sign in before generating. <a href="/issuer">Sign in to continue</a></div>
+    <div class="layout">
+      <form id="verifyForm" class="form-column">
+        <div class="card">
+          <fieldset>
+            <legend>01 · Employer information</legend>
+            <div class="fields">
+              <div class="field"><label for="employerName">Employer legal business name</label><input id="employerName" name="employerName" required maxlength="160"></div>
+              <div class="field"><label for="ein">EIN / Tax ID</label><input id="ein" name="ein" autocomplete="off" placeholder="XX-XXXXXXX" maxlength="10"></div>
+              <div class="field wide"><label for="employerLogo">Corporate logo (optional)</label><input id="employerLogo" type="file" accept="image/png,image/jpeg"><p class="helper">Displayed in the letter preview. Max 1 MB.</p></div>
+              <div class="field wide"><label for="employerAddress">Physical corporate address</label><input id="employerAddress" name="employerAddress" required maxlength="240" placeholder="Street, City, State ZIP"></div>
+              <div class="field"><label for="employerPhone">Main business phone</label><input id="employerPhone" name="employerPhone" type="tel" required maxlength="40"></div>
+              <div class="field"><label for="employerEmail">HR / payroll email</label><input id="employerEmail" name="employerEmail" type="email" required maxlength="160"></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>02 · Recipient and purpose</legend>
+            <div class="fields">
+              <div class="field"><label for="recipientName">Recipient name or organization</label><input id="recipientName" name="recipientName" maxlength="160"></div>
+              <div class="field"><label for="recipientEmail">Recipient email (optional)</label><input id="recipientEmail" name="recipientEmail" type="email" maxlength="160"></div>
+              <div class="field wide"><label for="recipientAddress">Recipient mailing address</label><input id="recipientAddress" name="recipientAddress" maxlength="240"></div>
+              <div class="field wide"><label for="purpose">Verification purpose</label><select id="purpose" name="purpose" required><option value="Residential Tenancy">Residential Tenancy</option><option value="Mortgage or Commercial Loan">Mortgage or Commercial Loan</option><option value="USCIS Immigration">USCIS Immigration</option><option value="Government Background Check">Government Background Check</option><option value="Standard Corporate Reference">Standard Corporate Reference</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>03 · Employee information</legend>
+            <div class="fields">
+              <div class="field"><label for="employeeName">Employee full name</label><input id="employeeName" name="employeeName" required maxlength="160"></div>
+              <div class="field"><label for="ssnLast4">SSN (last 4 digits only)</label><input id="ssnLast4" name="ssnLast4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234"></div>
+              <div class="field"><label for="lifecycle">Employment lifecycle</label><select id="lifecycle" name="lifecycle"><option>Current Employee</option><option>Former Employee</option></select></div>
+              <div class="field"><label for="jobTitle">Job title</label><input id="jobTitle" name="jobTitle" required maxlength="120"></div>
+              <div class="field"><label for="department">Department</label><input id="department" name="department" required maxlength="120"></div>
+              <div class="field"><label for="workStatus">Work status</label><select id="workStatus" name="workStatus"><option>Full-Time</option><option>Part-Time</option><option>Independent Contractor (1099)</option><option>Temporary</option></select></div>
+              <div class="field"><label for="startDate">Employment start date</label><input id="startDate" name="startDate" type="date" required></div>
+              <div class="field" id="separationField" hidden><label for="endDate">Separation date</label><input id="endDate" name="endDate" type="date"></div>
+              <div class="field"><label for="rehireEligibility">Rehire eligibility</label><select id="rehireEligibility" name="rehireEligibility"><option>Eligible</option><option>Not Eligible</option><option>Conditional</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>04 · Compensation and payroll</legend>
+            <div class="fields">
+              <div class="field"><label for="basePay">Base salary or hourly wage</label><input id="basePay" name="basePay" maxlength="60" placeholder="$72,000 annually"></div>
+              <div class="field"><label for="payFrequency">Pay frequency</label><select id="payFrequency" name="payFrequency"><option>Weekly</option><option>Bi-Weekly</option><option>Semi-Monthly</option><option>Monthly</option><option>Annual</option></select></div>
+              <div class="field"><label for="averageHours">Average weekly hours</label><input id="averageHours" name="averageHours" type="number" min="0" max="168" step="0.5"></div>
+              <div class="field"><label for="ytdGross">Year-to-date gross pay</label><input id="ytdGross" name="ytdGross" maxlength="60"></div>
+              <div class="field"><label for="bonus">Annual bonus, commission, or overtime</label><input id="bonus" name="bonus" maxlength="60"></div>
+              <div class="field"><span>Overtime eligibility</span><div class="inline"><label><input type="radio" name="overtimeEligible" value="Yes" checked> Yes</label><label><input type="radio" name="overtimeEligible" value="No"> No</label></div></div>
+              <div class="field wide"><span>Privacy redaction</span><div class="inline"><label><input id="redactSsn" type="checkbox"> Fully redact SSN (otherwise show last 4 only)</label><label><input id="redactCompensation" type="checkbox"> Redact compensation figures</label></div></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>05 · Authorization, signature and legal protection</legend>
+            <div class="fields">
+              <div class="field"><label for="representativeName">Authorized representative name</label><input id="representativeName" name="representativeName" required maxlength="160"></div>
+              <div class="field"><label for="representativeTitle">Representative official title</label><input id="representativeTitle" name="representativeTitle" required maxlength="120"></div>
+              <div class="field"><label for="representativePhone">Direct extension / phone</label><input id="representativePhone" name="representativePhone" type="tel" required maxlength="40"></div>
+              <div class="field"><label for="representativeEmail">Direct corporate email</label><input id="representativeEmail" name="representativeEmail" type="email" required maxlength="160"></div>
+              <div class="field wide">
+                <span>Signature mode</span>
+                <div class="signature-tabs inline">
+                  <label><input type="radio" name="signatureMode" value="draw" checked> Touchscreen / draw</label>
+                  <label><input type="radio" name="signatureMode" value="upload"> Image upload</label>
+                  <label><input type="radio" name="signatureMode" value="type"> Script font</label>
+                </div>
+                <div id="drawPanel" class="signature-panel"><div class="canvas-wrap"><canvas id="signatureCanvas" aria-label="Draw signature"></canvas><button class="canvas-clear" id="clearSignature" type="button">Clear</button></div><p class="helper">Sign with a finger, stylus, or mouse.</p></div>
+                <div id="uploadPanel" class="signature-panel" hidden><input id="signatureFile" type="file" accept="image/png,image/jpeg"></div>
+                <div id="typePanel" class="signature-panel" hidden><input id="typedSignature" maxlength="120" placeholder="Type the representative's full name"></div>
+              </div>
+              <div class="field wide"><div class="inline"><label><input id="corporateSeal" type="checkbox"> Include digital corporate seal</label><label><input id="liabilityDisclaimer" type="checkbox" checked> Include employer liability disclaimer</label><label><input id="notaryBlock" type="checkbox"> Include notary acknowledgement</label></div></div>
+              <div id="notaryFields" class="field wide" hidden><label for="notaryJurisdiction">Notary state / county jurisdiction</label><input id="notaryJurisdiction" maxlength="160" placeholder="State of ___, County of ___"><label for="commissionExpiration">Commission expiration</label><input id="commissionExpiration" type="date"></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>06 · Document attachments</legend>
+            <div class="field"><label for="attachments">Attach pay stubs or W-2 forms</label><input id="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"><p class="attachments-note">Attachments are encrypted with the record and included when emailed. Total upload limit: 4 MB.</p></div>
+          </fieldset>
+          <div class="form-actions"><button class="primary" type="submit" id="generateButton">Generate verification letter</button><p id="formStatus" class="status" role="status" aria-live="polite"></p></div>
+        </div>
       </form>
-      <section aria-live="polite" aria-label="Verification result">
-        <div id="output" class="letter-document"></div>
-      </section>
-      <a class="back-link" href="/">Back to Employment Verification USA</a>
-    </main>
-    <footer class="app-footer">
-      <div>
-        <strong>Employment Verification USA <span>US-EVS · US Employment Verification System</span></strong>
-        <p>&copy; 2026 Employment Verification USA &middot; BWILLNEXUS Systems<br />Email: bwillnexus@gmail.com<br />All rights reserved.</p>
-      </div>
-      <div class="footer-legal">
-        <nav class="footer-links" aria-label="Legal and support links">
-          <a href="/public/terms-and-conditions.html">Terms and Conditions</a>
-          <a href="/public/privacy-policy.html">Privacy Policy</a>
-          <a href="/public/refund-and-cancellation-policy.html">Refund and Cancellation Policy</a>
-          <a href="/public/digital-delivery-policy.html">Digital Delivery Policy</a>
-          <a href="/public/contact-support.html">Contact / Support</a>
-        </nav>
-        <a href="https://usevs.railway.app">usevs.railway.app</a>
-      </div>
-    </footer>
-  </body>
+      <aside class="preview-card" id="previewCard" aria-label="Live verification letter preview">
+        <div class="preview-head"><strong>LIVE DOCUMENT PREVIEW</strong><button id="closePreview" type="button">Close preview</button><button id="openPreview" type="button">Preview</button></div>
+        <article class="paper" id="letterPreview">
+          <div class="paper-brand"><img id="previewLogo" alt="Employer logo" hidden style="max-width:110px;max-height:55px;object-fit:contain"><strong id="previewEmployer">EMPLOYER LEGAL NAME</strong><span id="previewAddress">Corporate address · Business phone · HR email</span></div>
+          <span class="seal" id="sealPreview" hidden>US-EVS<br>VERIFIED</span>
+          <h2>EMPLOYMENT VERIFICATION LETTER</h2>
+          <p class="paper-meta" id="previewMeta">Document ID assigned at issuance</p>
+          <p id="paragraphOne">This statement provides official employment verification for the employee. The employee holds or held the position of job title within department, having commenced active service on start date. Employment status is classified as work status.</p>
+          <p id="ssnPreview"></p>
+          <p id="paragraphTwo">Compensation records reflect a base pay rate of base pay paid on a pay frequency schedule, with average weekly hours recorded at average hours. Year-to-date gross earnings stand at YTD earnings, with additional annual variable pay recorded at bonus amount. Overtime eligibility is marked as overtime eligibility.</p>
+          <p id="paragraphThree">This document is issued for verification purpose purposes. Information provided reflects company records. For independent verification or administrative questions, contact the representative directly. Verification Reference: Document ID.</p>
+          <p id="disclaimerPreview"></p><div id="notaryPreview"></div>
+          <div class="signature"><span>Authorized signature</span><div id="signaturePreview"></div><strong id="previewRepresentative">Representative name</strong><br><span id="previewTitle">Representative title</span></div>
+          <div class="qr" id="qrPreview"><span>QR verification code and audit metadata will appear after issuance.</span></div>
+        </article>
+        <div class="export-actions"><button type="button" id="downloadPdf" disabled>Download PDF</button><button type="button" id="downloadDocx" disabled>Download Word</button><button type="button" id="emailLetter" disabled>Email letter</button><button type="button" onclick="window.print()">Print</button></div>
+      </aside>
+    </div>
+  </main>
+  <footer class="app-footer"><span>US-EVS - US Employment Verification System. All rights reserved.</span><a href="/">Home</a></footer>
+</body>
 </html>

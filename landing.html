@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Employment Verification USA, US-EVS (US Employment Verification System): Instant Employment Verification for the United States." />
     <meta name="application-name" content="Employment Verification USA" />
-    <link rel="canonical" href="https://usevs.railway.app/landing" />
+    <link rel="canonical" href="https://www.us-evs.com/" />
     <title>Employment Verification USA | US-EVS (US Employment Verification System)</title>
     <link rel="stylesheet" href="/public/brand.css" />
     <script src="/public/launch-config.js" defer></script>
@@ -474,6 +474,16 @@
           gap: 30px;
         }
       }
+      @media (min-width: 1280px) {
+        .shell {
+          width: min(1240px, calc(100% - 64px));
+        }
+      }
+      @media (max-width: 767px) {
+        .hero-inner {
+          grid-template-columns: 1fr;
+        }
+      }
       @media (max-width: 700px) {
         .shell {
           width: min(100% - 32px, 560px);
@@ -573,14 +583,14 @@
   <body>
     <header class="site-header">
       <div class="shell header-inner">
-        <a class="brand-lockup" href="/landing" aria-label="Employment Verification USA home">
+        <a class="brand-lockup" href="/" aria-label="Employment Verification USA home">
           <img src="/public/us-evs-mark.svg" alt="" />
           <span class="brand-copy"><strong>Employment Verification USA</strong><small>US-EVS · US Employment Verification System</small></span>
         </a>
         <nav class="main-nav" aria-label="Main navigation">
           <a href="#pricing">Pricing</a>
-          <a href="/verify-page">Verify a letter</a>
-          <a href="/admin-page">Admin dashboard</a>
+          <a href="/lookup">Verify a letter</a>
+          <a href="/dashboard">Record history</a>
         </nav>
       </div>
     </header>
@@ -590,13 +600,13 @@
         <div class="shell hero-inner">
           <div>
             <p class="eyebrow">US-EVS · US EMPLOYMENT VERIFICATION SYSTEM</p>
-            <h1>Employment Verification USA</h1>
-            <p class="hero-copy">Instant Employment Verification for the United States</p>
-            <p class="hero-detail">Create a formal employment letter, give every record a traceable reference, and let recipients verify it online.</p>
+            <h1>Official US Employment Verification System</h1>
+            <p class="hero-copy">Standardized verification letters for HR, residential leasing, commercial lending, immigration, and background checks.</p>
+            <p class="hero-detail">US-EVS creates traceable employment records for corporate HR, lenders, property managers, government agencies, and former employee requests.</p>
             <div class="hero-actions">
-              <a class="button button-light" href="/">Create a letter</a>
-              <a class="button button-outline" href="/verify-page">Verify a letter</a>
-              <a class="button button-outline" href="/admin-page">Admin dashboard</a>
+              <a class="button button-light" href="/auth">Create Verification Letter</a>
+              <a class="button button-outline" href="/lookup">Verify Document ID</a>
+              <a class="button button-outline" href="/dashboard">View Record History</a>
             </div>
             <div class="hero-notes">
               <span>Structured letters</span>
@@ -630,6 +640,21 @@
           <div class="trust-point"><b>01</b> Reference number on every letter</div>
           <div class="trust-point"><b>02</b> Public verification by reference</div>
           <div class="trust-point"><b>03</b> Premium email and PDF delivery</div>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="shell">
+          <p class="section-kicker">VERIFICATION WORKFLOW</p>
+          <h2 class="section-title">A dependable record, ready to share.</h2>
+          <div class="how-grid">
+            <article class="how-step"><strong>DOCUMENTS</strong><h3>Instant PDF and Word export</h3><p>Generate a standardized, editable letter and a print-ready PDF for each authorized record.</p></article>
+            <article class="how-step"><strong>SIGNATURES</strong><h3>Three signature options</h3><p>Sign on touchscreens, upload a corporate signature image, or render a typed name in script.</p></article>
+            <article class="how-step"><strong>AUTHENTICITY</strong><h3>QR code and unique Document ID</h3><p>Every issued letter carries a reference and scannable verification code.</p></article>
+            <article class="how-step"><strong>PRIVACY</strong><h3>Redaction controls</h3><p>Choose whether to show the last four SSN digits and redact salary, YTD pay, or bonus figures.</p></article>
+            <article class="how-step"><strong>ISSUANCE</strong><h3>Disclaimer and optional notary block</h3><p>Include an employer liability statement, notary jurisdiction, signature line, and seal placeholder.</p></article>
+            <article class="how-step"><strong>RECORDKEEPING</strong><h3>Audit history and attachments</h3><p>Keep an issuance audit trail and attach pay stubs or W-2 forms to the secure letter package.</p></article>
+          </div>
         </div>
       </section>
 
@@ -713,15 +738,15 @@
       <div class="shell footer-inner">
         <div class="footer-brand">
           <img src="/public/us-evs-mark.svg" alt="" />
-          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://usevs.railway.app">usevs.railway.app</a></small></div>
+          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://www.us-evs.com">www.us-evs.com</a></small></div>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
-          <a href="/">Create a letter</a>
-          <a href="/verify-page">Verify a letter</a>
-          <a href="/admin-page">Admin dashboard</a>
+          <a href="/auth">Create Verification Letter</a>
+          <a href="/lookup">Verify Document ID</a>
+          <a href="/dashboard">View Record History</a>
         </nav>
         <div class="footer-legal">
-          <p>&copy; 2026 Employment Verification USA &middot; BWILLNEXUS Systems<br />Email: bwillnexus@gmail.com<br />All rights reserved.</p>
+          <p>US-EVS - US Employment Verification System. All rights reserved.<br />&copy; 2026 Employment Verification USA &middot; BWILLNEXUS Systems<br />Email: bwillnexus@gmail.com</p>
           <nav class="footer-links" aria-label="Legal and support links">
             <a href="/public/terms-and-conditions.html">Terms and Conditions</a>
             <a href="/public/privacy-policy.html">Privacy Policy</a>

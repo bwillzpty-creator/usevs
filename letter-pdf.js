@@ -61,14 +61,14 @@
     });
   }
 
-  function createPdfDocument(text) {
+  function createPdfDocument(text, qrMatrix) {
     const lines = wrapPdfLines(text);
     const lineHeights = { title: 36, metadata: 16, section: 22, body: 16, blank: 8 };
     const pages = [[]];
     let pageHeight = 0;
     lines.forEach((line) => {
       const height = lineHeights[line.type];
-      if (pageHeight + height > 680 && pages[pages.length - 1].length) {
+      if (pageHeight + height > (qrMatrix ? 600 : 680) && pages[pages.length - 1].length) {
         pages.push([]);
         pageHeight = 0;
       }
@@ -76,19 +76,20 @@
       pageHeight += height;
     });
 
-    const pageIds = Array.from({ length: pages.length }, (_, index) => 5 + index * 2);
+    const pageIds = Array.from({ length: pages.length }, (_, index) => 6 + index * 2);
     const objects = [
       "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
       `2 0 obj << /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >> endobj`,
       "3 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
-      "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj"
+      "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj",
+      "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >> endobj"
     ];
 
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
       const pageId = pageIds[pageIndex];
       const contentId = pageId + 1;
       const commands = [];
-      let y = 744;
+      let y = 720;
       pages[pageIndex].forEach((line) => {
         if (line.type === "blank") {
           y -= lineHeights.blank;
@@ -97,28 +98,49 @@
 
         if (line.type === "title") {
           y -= 22;
-          const x = Math.max(54, (612 - line.text.length * 8.5) / 2);
+          const x = Math.max(72, (612 - line.text.length * 8.5) / 2);
           commands.push(`BT /F2 16 Tf ${x.toFixed(2)} ${y} Td (${escapePdfText(line.text)}) Tj ET`);
           y -= 14;
         } else if (line.type === "metadata") {
           y -= 14;
-          const x = Math.max(54, (612 - line.text.length * 5.1) / 2);
+          const x = Math.max(72, (612 - line.text.length * 5.1) / 2);
           commands.push(`BT /F1 10 Tf ${x.toFixed(2)} ${y} Td (${escapePdfText(line.text)}) Tj ET`);
           y -= 2;
         } else if (line.type === "section") {
           y -= 10;
-          commands.push(`BT /F2 12 Tf 54 ${y} Td (${escapePdfText(line.text)}) Tj ET`);
+          commands.push(`BT /F2 12 Tf 72 ${y} Td (${escapePdfText(line.text)}) Tj ET`);
           y -= 12;
+        } else if (/^Signature:/.test(line.text)) {
+          y -= 18;
+          commands.push(`BT /F3 15 Tf 90 ${y} Td (${escapePdfText(line.text)}) Tj ET`);
+          y -= 3;
         } else {
           y -= 14;
-          commands.push(`BT /F1 11 Tf 70 ${y} Td (${escapePdfText(line.text)}) Tj ET`);
+          commands.push(`BT /F1 11 Tf 90 ${y} Td (${escapePdfText(line.text)}) Tj ET`);
           y -= 2;
         }
       });
+      if (qrMatrix && Number.isInteger(qrMatrix.size) && qrMatrix.size > 0 && qrMatrix.data.length === qrMatrix.size * qrMatrix.size) {
+        const qrWidth = 72;
+        const moduleWidth = qrWidth / (qrMatrix.size + 8);
+        const originX = 468;
+        const originY = 72;
+        commands.push(`1 g ${originX} ${originY} ${qrWidth} ${qrWidth} re f 0 g`);
+        commands.push("0 g");
+        for (let row = 0; row < qrMatrix.size; row += 1) {
+          for (let column = 0; column < qrMatrix.size; column += 1) {
+            if (!qrMatrix.data[row * qrMatrix.size + column]) continue;
+            const x = originX + (column + 4) * moduleWidth;
+            const y = originY + (qrMatrix.size - row + 3) * moduleWidth;
+            commands.push(`${x.toFixed(2)} ${y.toFixed(2)} ${moduleWidth.toFixed(2)} ${moduleWidth.toFixed(2)} re f`);
+          }
+        }
+        commands.push(`BT /F1 7 Tf 72 102 Td (Scan to verify: ${escapePdfText("US-EVS document reference")}) Tj ET`);
+      }
       const stream = commands.join("\n");
 
       objects.push(
-        `${pageId} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >> endobj`,
+        `${pageId} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents ${contentId} 0 R >> endobj`,
         `${contentId} 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`
       );
     }
@@ -139,12 +161,12 @@
     return pdf;
   }
 
-  function createPdfBlob(text) {
-    return new Blob([createPdfDocument(text)], { type: "application/pdf" });
+  function createPdfBlob(text, qrMatrix) {
+    return new Blob([createPdfDocument(text, qrMatrix)], { type: "application/pdf" });
   }
 
-  function createPdfBuffer(text) {
-    return Buffer.from(createPdfDocument(text), "ascii");
+  function createPdfBuffer(text, qrMatrix) {
+    return Buffer.from(createPdfDocument(text, qrMatrix), "ascii");
   }
 
   return { getLetterLines, createPdfBlob, createPdfBuffer };
