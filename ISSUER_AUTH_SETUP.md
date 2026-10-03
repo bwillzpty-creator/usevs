@@ -48,11 +48,12 @@ PAYFAST_CANCEL_URL=https://usevs.railway.app/payfast/cancel
 PAYFAST_NOTIFY_URL=https://usevs.railway.app/payfast/notify
 PAYFAST_ONCE_OFF_AMOUNT=4.99
 PAYFAST_SUBSCRIPTION_AMOUNT=24.99
+PAYFAST_ANNUAL_AMOUNT=269.99
 PAYFAST_SUBSCRIPTION_FREQUENCY=3
 PAYFAST_SUBSCRIPTION_CYCLES=0
 ```
 
-Railway manages `PORT`; do not hard-code it in production. Set `PAYFAST_SANDBOX=false` and configure live merchant credentials only after the integration has been verified.
+The annual plan uses PayFast's annual recurring frequency and grants 365 days of access from each confirmed annual payment. `PAYFAST_ANNUAL_AMOUNT` defaults to `269.99`. Railway manages `PORT`; do not hard-code it in production. Set `PAYFAST_SANDBOX=false` and configure live merchant credentials only after the integration has been verified.
 
 ## Employer Review
 

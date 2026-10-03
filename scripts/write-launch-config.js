@@ -25,11 +25,13 @@ function hasLivePayFastConfiguration(environment) {
   );
   const onceOffAmount = Number(environment.PAYFAST_ONCE_OFF_AMOUNT);
   const subscriptionAmount = Number(environment.PAYFAST_SUBSCRIPTION_AMOUNT);
+  const annualAmount = Number(environment.PAYFAST_ANNUAL_AMOUNT || 269.99);
 
   return requiredValues.slice(0, 3).every(Boolean) &&
     hasHttpsCallbacks &&
     Number.isFinite(onceOffAmount) && onceOffAmount >= 4.99 &&
-    Number.isFinite(subscriptionAmount) && subscriptionAmount >= 4.99;
+    Number.isFinite(subscriptionAmount) && subscriptionAmount >= 4.99 &&
+    Number.isFinite(annualAmount) && annualAmount >= 4.99;
 }
 
 function writeLaunchConfig(environment = process.env) {

@@ -13,6 +13,7 @@ const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx
 const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
+const { getAccessExpiration, getPaymentPlan, hasActivePremiumAccess } = require('./payment-plans');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -814,14 +815,12 @@ app.post('/send-email', async (req, res) => {
 
 app.post('/payfast/initiate', async (req, res) => {
   const paymentType = req.body?.paymentType || req.body?.type;
-  if (!['once-off', 'subscription'].includes(paymentType)) {
-    return res.status(400).json({ success: false, message: 'Payment type must be once-off or subscription' });
+  const paymentPlan = getPaymentPlan(paymentType);
+  if (!paymentPlan) {
+    return res.status(400).json({ success: false, message: 'Payment type must be once-off, subscription, or annual-subscription' });
   }
 
-  const amountSetting = paymentType === 'subscription'
-    ? 'PAYFAST_SUBSCRIPTION_AMOUNT'
-    : 'PAYFAST_ONCE_OFF_AMOUNT';
-  const amount = Number(process.env[amountSetting]);
+  const { amountSetting, amount } = paymentPlan;
   const requiredSettings = [
     'PAYFAST_MERCHANT_ID',
     'PAYFAST_MERCHANT_KEY',
@@ -831,7 +830,7 @@ app.post('/payfast/initiate', async (req, res) => {
   ];
   const missingSettings = requiredSettings.filter((name) => !process.env[name]);
   if (!Number.isFinite(amount) || amount < 4.99) missingSettings.push(amountSetting);
-  if (paymentType === 'subscription' && !process.env.PAYFAST_PASSPHRASE) {
+  if (paymentPlan.recurring && !process.env.PAYFAST_PASSPHRASE) {
     missingSettings.push('PAYFAST_PASSPHRASE');
   }
   if (missingSettings.length) {
@@ -855,17 +854,15 @@ app.post('/payfast/initiate', async (req, res) => {
     return res.status(400).json({ success: false, message: 'A valid email address is required' });
   }
 
-  const frequency = Number(process.env.PAYFAST_SUBSCRIPTION_FREQUENCY || 3);
   const cycles = Number(process.env.PAYFAST_SUBSCRIPTION_CYCLES ?? 0);
-  if (paymentType === 'subscription' &&
-      (!Number.isInteger(frequency) || frequency < 1 || frequency > 6 || !Number.isInteger(cycles) || cycles < 0)) {
+  if (paymentPlan.recurring &&
+      (!Number.isInteger(paymentPlan.frequency) || paymentPlan.frequency < 1 || paymentPlan.frequency > 6 ||
+       !Number.isInteger(cycles) || cycles < 0)) {
     return res.status(503).json({ success: false, message: 'PayFast subscription settings are invalid' });
   }
 
   const paymentId = crypto.randomUUID();
-  const itemName = paymentType === 'subscription'
-    ? 'Employment Verification Premium Subscription'
-    : 'Employment Verification Premium';
+  const itemName = paymentPlan.itemName;
   let returnUrl;
   let cancelUrl;
   try {
@@ -886,10 +883,10 @@ app.post('/payfast/initiate', async (req, res) => {
     amount: amount.toFixed(2),
     item_name: itemName
   };
-  if (paymentType === 'subscription') {
+  if (paymentPlan.recurring) {
     paymentFields.subscription_type = '1';
     paymentFields.recurring_amount = amount.toFixed(2);
-    paymentFields.frequency = String(frequency);
+    paymentFields.frequency = String(paymentPlan.frequency);
     paymentFields.cycles = String(cycles);
   }
   paymentFields.signature = createPayFastSignature(paymentFields);
@@ -980,17 +977,20 @@ app.post('/payfast/notify', async (req, res) => {
       const record = payments.find((entry) => entry.m_payment_id === notification.m_payment_id);
       if (!record) throw new Error('Payment reference not found during update');
       if (notification.payment_status === 'COMPLETE') {
+        const paidAt = new Date();
         Object.assign(record, {
           status: 'COMPLETE',
           premium: true,
-          premium_features: record.payment_type === 'subscription'
+          premium_features: record.payment_type !== 'once-off'
             ? ['unlimited_letters', 'email_delivery']
             : ['one_letter', 'email_delivery'],
           pf_payment_id: notification.pf_payment_id || '',
           amount_gross: notification.amount_gross,
           email_address: notification.email_address || record.email_address,
-          paid_at: new Date().toISOString()
+          paid_at: paidAt.toISOString()
         });
+        const accessExpiresAt = getAccessExpiration(record.payment_type, paidAt);
+        if (accessExpiresAt) record.access_expires_at = accessExpiresAt;
       } else if (record.status !== 'COMPLETE') {
         Object.assign(record, { status: 'CANCELLED', premium: false });
       }
@@ -1013,9 +1013,17 @@ app.get('/payfast/return', async (req, res) => {
     const payments = await readPayments();
     const payment = payments.find((entry) => entry.m_payment_id === paymentId);
     if (payment?.status === 'COMPLETE' && payment.premium === true) {
+      const expiryTimestamp = payment.access_expires_at ? Date.parse(payment.access_expires_at) : NaN;
+      const expiryDate = Number.isFinite(expiryTimestamp)
+        ? new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(expiryTimestamp)
+        : '';
+      const accessActive = hasActivePremiumAccess(payment);
+      const message = accessActive
+        ? `Premium access is active for this payment.${expiryDate ? ` Annual access is available for 365 days, through ${expiryDate}.` : ''}`
+        : `Annual access expired${expiryDate ? ` on ${expiryDate}` : ''}.`;
       return res.type('html').send(paymentStatusPage(
-        'Payment Successful',
-        'Premium access is active for this payment.',
+        accessActive ? 'Payment Successful' : 'Annual Access Expired',
+        message,
         payment.m_payment_id
       ));
     }

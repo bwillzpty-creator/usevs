@@ -270,6 +270,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        padding: 12px 16px;
         color: #405049;
         font-size: 12px;
         font-weight: 600;
@@ -304,7 +305,7 @@
       }
       .pricing-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 16px;
         margin-top: 32px;
       }
@@ -366,7 +367,7 @@
         margin-top: 30px;
       }
       .how-step {
-        padding-top: 16px;
+        padding: 16px 24px 20px;
         border-top: 2px solid var(--line);
       }
       .how-step strong {
@@ -399,7 +400,7 @@
         gap: 0;
       }
       .trust-item {
-        padding: 16px 0;
+        padding: 16px 24px;
         border-top: 1px solid #cad8d2;
       }
       .trust-item strong {
@@ -467,6 +468,9 @@
         .hero-inner {
           grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
           gap: 30px;
+        }
+        .pricing-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .letter-preview {
           padding: 24px;
@@ -663,7 +667,7 @@
         <div class="shell">
           <p class="section-kicker">CLEAR, SIMPLE PRICING</p>
           <h2 class="section-title">Choose the pace that fits your work.</h2>
-          <p class="section-intro">Pay for an individual verification or choose a monthly plan for ongoing verification work. Prices are shown in US dollars.</p>
+          <p class="section-intro">Pay for an individual verification or choose a monthly or annual plan for ongoing verification work. Prices are shown in US dollars.</p>
           <p class="soft-launch-notice" data-premium-unavailable>Premium features will activate once PayFast is live.</p>
           <div class="pricing-grid">
             <article class="price-card">
@@ -692,6 +696,20 @@
               <form action="/payfast/initiate" method="post" data-premium-control hidden>
                 <input type="hidden" name="paymentType" value="subscription" />
                 <button class="button button-rust" type="submit">Go Premium</button>
+              </form>
+            </article>
+            <article class="price-card">
+              <span class="price-label">YEARLY SUBSCRIPTION</span>
+              <div class="price">$269.99 <small>/ year</small></div>
+              <p>For teams that want a full year of uninterrupted access.</p>
+              <ul class="feature-list">
+                <li>Unlimited letters for 365 days</li>
+                <li>PDF download and email delivery</li>
+                <li>Reference lookup and history</li>
+              </ul>
+              <form action="/payfast/initiate" method="post" data-premium-control hidden>
+                <input type="hidden" name="paymentType" value="annual-subscription" />
+                <button class="button button-green" type="submit">Choose Annual</button>
               </form>
             </article>
           </div>
