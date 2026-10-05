@@ -321,6 +321,16 @@
       .price-card.featured {
         border-top: 4px solid var(--green);
       }
+      .promo-banner {
+        margin: 22px 0 0;
+        padding: 16px 20px;
+        border-left: 5px solid var(--rust);
+        background: var(--deep);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.5;
+      }
       .price-label {
         color: var(--muted);
         font-size: 12px;
@@ -668,7 +678,7 @@
           <p class="section-kicker">CLEAR, SIMPLE PRICING</p>
           <h2 class="section-title">Choose the pace that fits your work.</h2>
           <p class="section-intro">Pay for an individual verification or choose a monthly or annual plan for ongoing verification work. Prices are shown in US dollars.</p>
-          <p class="soft-launch-notice" data-premium-unavailable>Premium features will activate once PayFast is live.</p>
+          <p class="promo-banner" role="note">Limited offer: Save 10 percent on monthly or 20 percent on yearly plans at checkout.</p>
           <div class="pricing-grid">
             <article class="price-card">
               <span class="price-label">PAY PER VERIFICATION</span>
@@ -679,10 +689,7 @@
                 <li>PDF download</li>
                 <li>Email delivery</li>
               </ul>
-              <form action="/payfast/initiate" method="post" data-premium-control hidden>
-                <input type="hidden" name="paymentType" value="once-off" />
-                <button class="button button-green" type="submit">Pay per verification</button>
-              </form>
+              <a class="button button-green" href="https://checkout.suby.fi/p/pro_fgm76ozb7q79erq3px2fujf7" target="_blank" rel="noopener noreferrer">Pay per verification</a>
             </article>
             <article class="price-card featured">
               <span class="price-label">MONTHLY SUBSCRIPTION</span>
@@ -693,10 +700,7 @@
                 <li>PDF download and email delivery</li>
                 <li>Reference lookup and history</li>
               </ul>
-              <form action="/payfast/initiate" method="post" data-premium-control hidden>
-                <input type="hidden" name="paymentType" value="subscription" />
-                <button class="button button-rust" type="submit">Go Premium</button>
-              </form>
+              <a class="button button-rust" href="https://checkout.suby.fi/p/pro_pmb5h5orao07p9j0w6iqcovb?promo=SAVE10" target="_blank" rel="noopener noreferrer">Go Premium</a>
             </article>
             <article class="price-card">
               <span class="price-label">YEARLY SUBSCRIPTION</span>
@@ -707,10 +711,7 @@
                 <li>PDF download and email delivery</li>
                 <li>Reference lookup and history</li>
               </ul>
-              <form action="/payfast/initiate" method="post" data-premium-control hidden>
-                <input type="hidden" name="paymentType" value="annual-subscription" />
-                <button class="button button-green" type="submit">Choose Annual</button>
-              </form>
+              <a class="button button-green" href="https://checkout.suby.fi/p/pro_isyheye4omxwzp2cadxyner8?promo=SAVE20" target="_blank" rel="noopener noreferrer">Choose Annual</a>
             </article>
           </div>
         </div>

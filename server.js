@@ -540,6 +540,7 @@ app.get('/index.html', async (req, res) => {
 });
 
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
 app.get('/issuer', (req, res) => res.redirect('/auth'));
 
 app.get('/api/auth/session', async (req, res) => {
