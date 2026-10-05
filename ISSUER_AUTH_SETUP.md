@@ -6,7 +6,7 @@ Letter issuance stays unavailable until mail delivery, encrypted storage, employ
 
 Set these as protected environment variables in the deployment platform or local environment. Do not commit their values:
 
-- `PUBLIC_BASE_URL`: canonical HTTPS origin, `https://usevs.railway.app`.
+- `PUBLIC_BASE_URL`: canonical HTTPS origin for your Linode-hosted domain, such as `https://your-domain.example`.
 - `DATA_ENCRYPTION_KEY`: 32 random bytes encoded as Base64. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` and keep a protected backup. Losing this key makes retained letters and pending business documents unreadable.
 - `ISSUER_REVIEW_TOKEN`: at least 32 random characters, generated with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`, used only by the business reviewer API.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`: working SMTP settings for employer confirmation and HR one-time codes.
@@ -14,22 +14,24 @@ Set these as protected environment variables in the deployment platform or local
 
 The application must have durable storage before live use. The JSON ledgers are stored under `DATA_DIR`; an ephemeral deployment filesystem can lose employer accounts and audit records on restart. Keep this directory outside any separately served static directory.
 
-Production uses `DATA_DIR=/var/data/usevs`. Attach a Railway volume to the service at `/var/data/usevs` before enabling issuance, then set the environment variables listed in `.env.example` in the Railway service settings. Railway supplies `PORT`; the server falls back to `8080` when it is not set. Keep the encryption key backed up securely; losing it makes retained letters and pending business documents unreadable.
+On Linode, use a persistent directory such as `/var/lib/usevs` for `DATA_DIR`. The directory must be writable by the application service account. Keep the encryption key backed up securely; losing it makes retained letters and pending business documents unreadable.
 
-## Railway Deployment
+## Linode Deployment
 
-1. Create a Railway project from this repository and deploy the service using the included `railway.json` configuration. The start command is `npm start`.
-2. Add a persistent volume to the service with mount path `/var/data/usevs`. The application stores account records, encrypted letters, and audit logs in this directory.
-3. Set the environment variables below in the Railway service. Keep SMTP credentials, `DATA_ENCRYPTION_KEY`, and `ISSUER_REVIEW_TOKEN` private. Generate fresh encryption and review tokens if this is a new production environment; preserve existing values when migrating an existing deployment.
-4. Configure `usevs.railway.app` as the public domain if it is available to your Railway account. Otherwise, use the Railway-generated service domain (typically `*.up.railway.app`) or a custom domain you control, and update `PUBLIC_BASE_URL` to match.
-5. Confirm the deployment passes its `/landing` health check before directing users to `https://usevs.railway.app`.
+1. Create an Ubuntu Linode and point your domain's DNS record to its public IP address. Install Node.js 22.13 or newer, npm, and Nginx; check `node --version` before installing the application.
+2. Check out this repository on the server (for example, in `/opt/usevs`) and install production dependencies with `npm ci --omit=dev`.
+3. Create a dedicated `usevs` system account and the persistent data directory `/var/lib/usevs`; make the data directory writable by that account. The application stores its SQLite database, account records, encrypted letters, and audit logs there.
+4. Create `/etc/usevs/usevs.env`, readable only by root, with the environment values below. Keep SMTP credentials, `DATA_ENCRYPTION_KEY`, and `ISSUER_REVIEW_TOKEN` private. Generate fresh encryption and review tokens for a new production environment; preserve existing values when migrating an existing deployment.
+5. Configure a systemd service to run `npm start` from the application directory as the `usevs` account, loading `/etc/usevs/usevs.env` with `EnvironmentFile`. Enable and start the service, and confirm it listens on port `8080`.
+6. Configure Nginx to proxy HTTPS requests for your domain to `http://127.0.0.1:8080`, and provision a TLS certificate. Set `PUBLIC_BASE_URL` to the exact HTTPS origin and verify that `https://your-domain.example/landing` responds successfully before enabling issuance.
 
 Required runtime variables:
 
 ```text
 NODE_ENV=production
-DATA_DIR=/var/data/usevs
-PUBLIC_BASE_URL=https://usevs.railway.app
+DATA_DIR=/var/lib/usevs
+PORT=8080
+PUBLIC_BASE_URL=https://your-domain.example
 SMTP_HOST=<SMTP host>
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -40,7 +42,7 @@ DATA_ENCRYPTION_KEY=<existing or newly generated 32-byte Base64 key>
 ISSUER_REVIEW_TOKEN=<existing or newly generated review token>
 ```
 
-Railway manages `PORT`; do not hard-code it in production.
+Replace `your-domain.example` with the Linode-hosted application's real domain. The Linode instance runs the Node.js process directly; Nginx provides the public HTTPS endpoint. Back up the persistent data directory and encryption key securely.
 
 ## Employer Review
 

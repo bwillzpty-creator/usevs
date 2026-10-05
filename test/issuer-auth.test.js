@@ -5,6 +5,34 @@ const path = require('node:path');
 const test = require('node:test');
 const { IssuerAuth, SESSION_COOKIE } = require('../issuer-auth');
 
+test('review account is seeded idempotently and still requires email OTP', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-review-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const messages = [];
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: { sendMail: async (message) => messages.push(message) },
+    emailFrom: 'verification@example.test',
+    publicBaseUrl: 'https://verification.example.test',
+    reviewToken: ''
+  });
+  await auth.initialize();
+
+  assert.equal(await auth.ensureReviewAccount('ReviewPassword123!'), true);
+  assert.equal(await auth.ensureReviewAccount('ReviewPassword123!'), false);
+  const store = await auth.readStore();
+  assert.equal(store.employers.length, 1);
+  assert.equal(store.employers[0].status, 'verified');
+  assert.equal(store.employers[0].officers[0].title, 'Verified User / Full Access');
+
+  const challenge = await auth.beginSignIn('review@us-evs.com', 'ReviewPassword123!', '127.0.0.1');
+  const code = messages[0].text.match(/\b(\d{6})\b/)[1];
+  const login = await auth.completeSignIn(challenge.challengeId, code);
+  const context = await auth.getSession({ headers: { cookie: `${SESSION_COOKIE}=${login.token}` } });
+  assert.equal(context.officer.email, 'review@us-evs.com');
+});
+
 test('employer review and HR OTP are required for an issuer session', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-issuer-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));

@@ -503,7 +503,8 @@ app.post('/api/auth/otp', async (req, res) => {
   try {
     const result = await issuerAuth.completeSignIn(req.body?.challengeId, req.body?.code);
     setIssuerSessionCookie(res, result.token);
-    return res.json({ success: true, employer: result.employer, officer: result.officer });
+    const redirectTo = result.officer.email === 'review@us-evs.com' ? '/dashboard' : '/verify';
+    return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
   } catch (error) {
     return res.status(401).json({ success: false, message: error.message });
   }
@@ -1266,6 +1267,7 @@ async function startServer() {
     ensureJsonArrayFile(verificationAuditPath),
     issuerAuth.initialize()
   ]);
+  await issuerAuth.ensureReviewAccount('ReviewPassword123!');
   await migrateLegacyLetterHistory();
   await migrateSecureLettersToDatabase();
   await purgeExpiredEmployeeData();

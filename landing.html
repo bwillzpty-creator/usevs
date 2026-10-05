@@ -167,7 +167,7 @@
         color: #fff;
       }
       .hero-actions .button:hover,
-      .price-card .button:hover {
+      .hero-actions .button:hover {
         filter: brightness(0.94);
       }
       .hero-notes {
@@ -302,73 +302,6 @@
         font-size: 15px;
         line-height: 1.7;
       }
-      .pricing-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 32px;
-      }
-      .price-card {
-        min-height: 310px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 26px;
-        border: 1px solid var(--line);
-        background: #fff;
-      }
-      .price-card.featured {
-        border-top: 4px solid var(--green);
-      }
-      .promo-banner {
-        margin: 22px 0 0;
-        padding: 16px 20px;
-        border-left: 5px solid var(--rust);
-        background: var(--deep);
-        color: #fff;
-        font-size: 15px;
-        font-weight: 700;
-        line-height: 1.5;
-      }
-      .price-label {
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 700;
-      }
-      .price {
-        margin: 17px 0 4px;
-        color: var(--brand-orange);
-        font-family: Georgia, "Times New Roman", serif;
-        font-size: 42px;
-      }
-      .price small {
-        color: #9ca3af;
-        font-family: Arial, sans-serif;
-        font-size: 13px;
-      }
-      .price-card p {
-        margin: 8px 0 16px;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.6;
-      }
-      .feature-list {
-        display: grid;
-        gap: 9px;
-        margin: 0 0 22px;
-        padding: 0;
-        color: #405049;
-        font-size: 12px;
-        list-style: none;
-      }
-      .feature-list li::before {
-        margin-right: 8px;
-        color: var(--green);
-        content: "✓";
-      }
-      .price-card form {
-        margin-top: auto;
-      }
       .how-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -478,9 +411,6 @@
           grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
           gap: 30px;
         }
-        .pricing-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
         .letter-preview {
           padding: 24px;
         }
@@ -543,16 +473,9 @@
         .section-title {
           font-size: 31px;
         }
-        .pricing-grid,
         .how-grid,
         .trust-grid {
           grid-template-columns: 1fr;
-        }
-        .pricing-grid {
-          gap: 12px;
-        }
-        .price-card {
-          min-height: 290px;
         }
         .trust-grid {
           gap: 24px;
@@ -602,7 +525,6 @@
           <span class="brand-copy"><strong>Employment Verification USA</strong><small>US-EVS · US Employment Verification System</small></span>
         </a>
         <nav class="main-nav" aria-label="Main navigation">
-          <a href="#pricing">Pricing</a>
           <a href="/lookup">Verify a letter</a>
           <a href="/dashboard">Record history</a>
         </nav>
@@ -653,7 +575,7 @@
         <div class="shell trust-strip-inner">
           <div class="trust-point"><b>01</b> Reference number on every letter</div>
           <div class="trust-point"><b>02</b> Public verification by reference</div>
-          <div class="trust-point"><b>03</b> Premium email and PDF delivery</div>
+          <div class="trust-point"><b>03</b> Email and PDF delivery</div>
         </div>
       </section>
 
@@ -668,50 +590,6 @@
             <article class="how-step"><strong>PRIVACY</strong><h3>Redaction controls</h3><p>Choose whether to show the last four SSN digits and redact salary, YTD pay, or bonus figures.</p></article>
             <article class="how-step"><strong>ISSUANCE</strong><h3>Disclaimer and optional notary block</h3><p>Include an employer liability statement, notary jurisdiction, signature line, and seal placeholder.</p></article>
             <article class="how-step"><strong>RECORDKEEPING</strong><h3>Audit history and attachments</h3><p>Keep an issuance audit trail and attach pay stubs or W-2 forms to the secure letter package.</p></article>
-          </div>
-        </div>
-      </section>
-
-      <section id="pricing" class="content-section">
-        <div class="shell">
-          <p class="section-kicker">CLEAR, SIMPLE PRICING</p>
-          <h2 class="section-title">Choose the pace that fits your work.</h2>
-          <p class="section-intro">Pay for an individual verification or choose a monthly or annual plan for ongoing verification work. Prices are shown in US dollars.</p>
-          <p class="promo-banner" role="note">Limited offer: Save 10 percent on monthly or 20 percent on yearly plans at checkout.</p>
-          <div class="pricing-grid">
-            <article class="price-card">
-              <span class="price-label">PAY PER VERIFICATION</span>
-              <div class="price">$4.99 <small>/ verification</small></div>
-              <p>For occasional employment verification requests.</p>
-              <ul class="feature-list">
-                <li>One verification letter</li>
-                <li>PDF download</li>
-                <li>Email delivery</li>
-              </ul>
-              <a class="button button-green" href="https://checkout.suby.fi/p/pro_fgm76ozb7q79erq3px2fujf7" target="_blank" rel="noopener noreferrer">Pay per verification</a>
-            </article>
-            <article class="price-card featured">
-              <span class="price-label">MONTHLY SUBSCRIPTION</span>
-              <div class="price">$24.99 <small>/ month</small></div>
-              <p>For teams and operators handling regular requests.</p>
-              <ul class="feature-list">
-                <li>Unlimited letters while subscribed</li>
-                <li>PDF download and email delivery</li>
-                <li>Reference lookup and history</li>
-              </ul>
-              <a class="button button-rust" href="https://checkout.suby.fi/p/pro_pmb5h5orao07p9j0w6iqcovb?promo=SAVE10" target="_blank" rel="noopener noreferrer">Go Premium</a>
-            </article>
-            <article class="price-card">
-              <span class="price-label">YEARLY SUBSCRIPTION</span>
-              <div class="price">$269.99 <small>/ year</small></div>
-              <p>For teams that want a full year of uninterrupted access.</p>
-              <ul class="feature-list">
-                <li>Unlimited letters for 365 days</li>
-                <li>PDF download and email delivery</li>
-                <li>Reference lookup and history</li>
-              </ul>
-              <a class="button button-green" href="https://checkout.suby.fi/p/pro_isyheye4omxwzp2cadxyner8?promo=SAVE20" target="_blank" rel="noopener noreferrer">Choose Annual</a>
-            </article>
           </div>
         </div>
       </section>
@@ -733,8 +611,8 @@
               <p>Share the public verification page so a recipient can look up a letter by reference.</p>
             </article>
             <article class="trust-item">
-              <strong>Payment confirmation</strong>
-              <p>Plan purchases are completed through our hosted checkout pages.</p>
+              <strong>Digital delivery</strong>
+              <p>Authorized issuers can generate, download, and email verification letters.</p>
             </article>
           </div>
         </div>

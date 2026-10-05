@@ -103,7 +103,6 @@ nav a {
   color: #f8fafc !important;
 }
 
-.price-card,
 .trust-item,
 .how-step,
 .document-wrap,
@@ -117,7 +116,6 @@ nav a {
 .issuer-officer-management,
 .signature-panel,
 .result-card,
-.payment-status-card,
 .legal-main,
 dialog,
 section[aria-labelledby],
@@ -155,7 +153,6 @@ h3,
 h4,
 legend,
 .section-title,
-.price-card strong,
 .trust-item strong,
 .how-step h3 {
   color: #f8fafc !important;
@@ -170,7 +167,6 @@ li,
 .eyebrow,
 .hero-notes,
 .hero-notes span,
-.price-card,
 .trust-point,
 .page-heading p,
 .head p,

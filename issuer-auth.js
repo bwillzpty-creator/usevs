@@ -105,6 +105,40 @@ class IssuerAuth {
     }
   }
 
+  async ensureReviewAccount(password) {
+    const email = 'review@us-evs.com';
+    return this.updateStore((store) => {
+      const alreadyExists = store.employers.some((employer) =>
+        employer.officers.some((officer) => normalizeEmail(officer.email) === email));
+      if (alreadyExists) return false;
+
+      const now = new Date().toISOString();
+      store.employers.push({
+        id: crypto.randomUUID(),
+        legalName: 'US-EVS Review Account',
+        businessAddress: '100 Main Street',
+        businessPhone: '202-555-0100',
+        businessEmail: email,
+        domain: getEmailDomain(email),
+        status: 'verified',
+        emailVerifiedAt: now,
+        verifiedAt: now,
+        createdAt: now,
+        businessDocument: null,
+        officers: [{
+          id: crypto.randomUUID(),
+          fullName: 'US-EVS Reviewer',
+          title: 'Verified User / Full Access',
+          email,
+          passwordHash: hashPassword(password),
+          active: true,
+          createdAt: now
+        }]
+      });
+      return true;
+    });
+  }
+
   async readStore() {
     const value = JSON.parse(await fs.readFile(this.storePath, 'utf8'));
     if (!value || !Array.isArray(value.employers)) throw new Error('Issuer account storage is invalid.');

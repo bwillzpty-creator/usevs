@@ -62,12 +62,12 @@ otpForm.addEventListener('submit', async (event) => {
   button.disabled = true;
   showMessage(otpStatus, 'Verifying signatory code...');
   try {
-    await requestJson('/api/auth/otp', {
+    const result = await requestJson('/api/auth/otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challengeId: loginChallengeId, code: otpForm.elements.code.value })
     });
-    window.location.assign('/verify');
+    window.location.assign(result.redirectTo || '/verify');
   } catch (error) {
     showMessage(otpStatus, error.message, true);
     otpForm.elements.code.value = '';
