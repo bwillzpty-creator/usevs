@@ -7,10 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "postinstall": "node scripts/write-launch-config.js",
-    "prestart": "node scripts/write-launch-config.js",
     "start": "node --experimental-sqlite server.js",
-    "predev": "node scripts/write-launch-config.js",
     "dev": "node --experimental-sqlite server.js",
     "test": "node --test"
   },

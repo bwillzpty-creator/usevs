@@ -68,21 +68,6 @@ textarea:focus-visible {
   color: var(--brand-steel);
 }
 
-[data-premium-control][hidden],
-[data-premium-unavailable][hidden] {
-  display: none !important;
-}
-
-.soft-launch-notice {
-  margin: 14px 0;
-  padding: 11px 14px;
-  border-left: 3px solid var(--brand-steel);
-  background: var(--brand-slate);
-  color: #e2e8f0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 /* Consistent navy/slate application chrome with paper-like document previews. */
 body,
 body > main,
@@ -192,7 +177,6 @@ li,
 .intro,
 .brand-copy small,
 .brand small,
-.soft-launch-notice,
 .page-heading p,
 .heading p,
 .helper,
@@ -303,15 +287,13 @@ tbody tr:hover {
   color: #fca5a5 !important;
 }
 
-.notice,
-.soft-launch-notice {
+.notice {
   border-color: #475569 !important;
   background-color: #243247 !important;
   color: #e2e8f0 !important;
 }
 
-.notice a,
-.soft-launch-notice a {
+.notice a {
   color: var(--brand-steel) !important;
 }
 

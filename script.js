@@ -1,12 +1,4 @@
 let generatedLetter = "";
-const premiumPaymentsEnabled = window.USEVS_LAUNCH_CONFIG?.premiumPaymentsEnabled === true;
-
-document.querySelectorAll("[data-premium-control]").forEach((control) => {
-  control.hidden = !premiumPaymentsEnabled;
-});
-document.querySelectorAll("[data-premium-unavailable]").forEach((notice) => {
-  notice.hidden = premiumPaymentsEnabled;
-});
 
 const issuerLogoutButton = document.getElementById("issuerLogoutButton");
 if (issuerLogoutButton) {
@@ -303,9 +295,7 @@ if (adminDashboard) {
           createActionButton("View Letter", () => showLetter(entry)),
           createActionButton("Download PDF", () => downloadLetter(entry))
         );
-        if (premiumPaymentsEnabled) {
-          actions.append(createActionButton("Send Email", () => openEmailDialog(entry)));
-        }
+        actions.append(createActionButton("Send Email", () => openEmailDialog(entry)));
         actionCell.append(actions);
         row.append(actionCell);
       }

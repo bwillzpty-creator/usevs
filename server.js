@@ -13,7 +13,6 @@ const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx
 const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
-const { getAccessExpiration, getPaymentPlan, hasActivePremiumAccess } = require('./payment-plans');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -21,7 +20,6 @@ const dataDirectory = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : process.env.NODE_ENV === 'production' ? '/var/data/usevs' : __dirname;
 const historyPath = path.join(dataDirectory, 'letter_history.json');
-const paymentsPath = path.join(dataDirectory, 'payments.json');
 const secureLettersPath = path.join(dataDirectory, 'secure_letters.json');
 const verificationAuditPath = path.join(dataDirectory, 'verification_audit.json');
 const issuerAccountsPath = path.join(dataDirectory, 'issuer_accounts.json');
@@ -40,7 +38,6 @@ const emailTransport = process.env.SMTP_HOST && emailFrom && Number.isInteger(sm
   : null;
 let referenceSequence = 0;
 let historyWriteQueue = Promise.resolve();
-let paymentWriteQueue = Promise.resolve();
 let letterDataWriteQueue = Promise.resolve();
 let database;
 const issuerAuth = new IssuerAuth({
@@ -374,97 +371,6 @@ function appendLetterHistory(entry) {
   const pendingWrite = historyWriteQueue.then(writeEntry, writeEntry);
   historyWriteQueue = pendingWrite.catch(() => {});
   return pendingWrite;
-}
-
-async function loadPayments() {
-  const contents = await fs.readFile(paymentsPath, 'utf8');
-  const payments = JSON.parse(contents);
-  if (!Array.isArray(payments)) {
-    throw new Error('Payment history must be a JSON array');
-  }
-  return payments;
-}
-
-async function readPayments() {
-  await paymentWriteQueue;
-  return loadPayments();
-}
-
-function updatePayments(update) {
-  const writeUpdate = async () => {
-    const payments = await loadPayments();
-    const result = update(payments);
-    const temporaryPath = `${paymentsPath}.tmp`;
-    await fs.writeFile(temporaryPath, `${JSON.stringify(payments, null, 2)}\n`, 'utf8');
-    await fs.rename(temporaryPath, paymentsPath);
-    return result;
-  };
-
-  const pendingWrite = paymentWriteQueue.then(writeUpdate, writeUpdate);
-  paymentWriteQueue = pendingWrite.catch(() => {});
-  return pendingWrite;
-}
-
-function encodePayFastValue(value) {
-  return encodeURIComponent(String(value).trim())
-    .replace(/[!'()*~]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
-    .replace(/%20/g, '+');
-}
-
-function payFastParameterString(data, includePassphrase = true) {
-  const parameters = Object.entries(data)
-    .filter(([key, value]) => key !== 'signature' && value !== undefined && value !== null && String(value) !== '')
-    .map(([key, value]) => `${key}=${encodePayFastValue(value)}`);
-  let parameterString = parameters.join('&');
-
-  if (includePassphrase && process.env.PAYFAST_PASSPHRASE) {
-    parameterString += `${parameterString ? '&' : ''}passphrase=${encodePayFastValue(process.env.PAYFAST_PASSPHRASE)}`;
-  }
-  return parameterString;
-}
-
-function createPayFastSignature(data) {
-  return crypto.createHash('md5').update(payFastParameterString(data)).digest('hex');
-}
-
-function isValidPayFastSignature(data) {
-  const suppliedSignature = typeof data.signature === 'string' ? data.signature : '';
-  if (!/^[a-f0-9]{32}$/i.test(suppliedSignature)) return false;
-
-  const expectedSignature = Buffer.from(createPayFastSignature(data), 'hex');
-  const providedSignature = Buffer.from(suppliedSignature, 'hex');
-  return crypto.timingSafeEqual(expectedSignature, providedSignature);
-}
-
-function payFastBaseUrl() {
-  const sandboxSetting = process.env.PAYFAST_SANDBOX;
-  const isSandbox = sandboxSetting === undefined
-    ? process.env.PAYFAST_MODE !== 'live'
-    : sandboxSetting.toLowerCase() === 'true';
-  return isSandbox ? 'https://sandbox.payfast.co.za' : 'https://www.payfast.co.za';
-}
-
-function addPaymentId(urlValue, paymentId) {
-  const url = new URL(urlValue);
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('PayFast callback URLs must use HTTP or HTTPS');
-  url.searchParams.set('m_payment_id', paymentId);
-  return url.toString();
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[character]);
-}
-
-function paymentStatusPage(title, message, paymentId = '') {
-  const paymentReference = paymentId
-    ? `<p class="reference">Payment reference: ${escapeHtml(paymentId)}</p>`
-    : '';
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title>
-<style>body{margin:0;background:#0a192f;color:#f8fafc;font:16px Arial,sans-serif}main{max-width:560px;margin:12vh auto;padding:32px;background:#1e293b;border-top:4px solid #38bdf8;box-shadow:0 8px 24px #00000014}h1{margin-top:0;font-size:24px}.reference{color:#cbd5e1;font-size:13px}a{display:inline-block;margin-top:12px;color:#38bdf8}</style><link rel="stylesheet" href="/public/brand.css"></head>
-<body><main class="payment-status-card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p>${paymentReference}<a href="/">Return to Employment Verification</a></main></body></html>`;
 }
 
 // Allow server to read JSON from POST requests
@@ -813,240 +719,6 @@ app.post('/send-email', async (req, res) => {
     return res.status(502).json({ success: false, message: 'Unable to send email' });
   }
 });
-
-app.post('/payfast/initiate', async (req, res) => {
-  const paymentType = req.body?.paymentType || req.body?.type;
-  const paymentPlan = getPaymentPlan(paymentType);
-  if (!paymentPlan) {
-    return res.status(400).json({ success: false, message: 'Payment type must be once-off, subscription, or annual-subscription' });
-  }
-
-  const { amountSetting, amount } = paymentPlan;
-  const requiredSettings = [
-    'PAYFAST_MERCHANT_ID',
-    'PAYFAST_MERCHANT_KEY',
-    'PAYFAST_RETURN_URL',
-    'PAYFAST_CANCEL_URL',
-    'PAYFAST_NOTIFY_URL'
-  ];
-  const missingSettings = requiredSettings.filter((name) => !process.env[name]);
-  if (!Number.isFinite(amount) || amount < 4.99) missingSettings.push(amountSetting);
-  if (paymentPlan.recurring && !process.env.PAYFAST_PASSPHRASE) {
-    missingSettings.push('PAYFAST_PASSPHRASE');
-  }
-  if (missingSettings.length) {
-    return res.status(503).json({
-      success: false,
-      message: `PayFast configuration is incomplete: ${[...new Set(missingSettings)].join(', ')}`
-    });
-  }
-
-  const sandboxSetting = process.env.PAYFAST_SANDBOX;
-  if (sandboxSetting !== undefined && !['true', 'false'].includes(sandboxSetting.toLowerCase())) {
-    return res.status(503).json({ success: false, message: 'PAYFAST_SANDBOX must be true or false' });
-  }
-  const mode = process.env.PAYFAST_MODE || 'sandbox';
-  if (!['sandbox', 'live'].includes(mode)) {
-    return res.status(503).json({ success: false, message: 'PAYFAST_MODE must be sandbox or live' });
-  }
-
-  const recipient = typeof req.body.email === 'string' ? req.body.email.trim() : '';
-  if (recipient && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-    return res.status(400).json({ success: false, message: 'A valid email address is required' });
-  }
-
-  const cycles = Number(process.env.PAYFAST_SUBSCRIPTION_CYCLES ?? 0);
-  if (paymentPlan.recurring &&
-      (!Number.isInteger(paymentPlan.frequency) || paymentPlan.frequency < 1 || paymentPlan.frequency > 6 ||
-       !Number.isInteger(cycles) || cycles < 0)) {
-    return res.status(503).json({ success: false, message: 'PayFast subscription settings are invalid' });
-  }
-
-  const paymentId = crypto.randomUUID();
-  const itemName = paymentPlan.itemName;
-  let returnUrl;
-  let cancelUrl;
-  try {
-    returnUrl = addPaymentId(process.env.PAYFAST_RETURN_URL, paymentId);
-    cancelUrl = addPaymentId(process.env.PAYFAST_CANCEL_URL, paymentId);
-  } catch (error) {
-    return res.status(503).json({ success: false, message: 'PayFast callback URLs are invalid' });
-  }
-
-  const paymentFields = {
-    merchant_id: process.env.PAYFAST_MERCHANT_ID,
-    merchant_key: process.env.PAYFAST_MERCHANT_KEY,
-    return_url: returnUrl,
-    cancel_url: cancelUrl,
-    notify_url: process.env.PAYFAST_NOTIFY_URL,
-    email_address: recipient,
-    m_payment_id: paymentId,
-    amount: amount.toFixed(2),
-    item_name: itemName
-  };
-  if (paymentPlan.recurring) {
-    paymentFields.subscription_type = '1';
-    paymentFields.recurring_amount = amount.toFixed(2);
-    paymentFields.frequency = String(paymentPlan.frequency);
-    paymentFields.cycles = String(cycles);
-  }
-  paymentFields.signature = createPayFastSignature(paymentFields);
-
-  try {
-    await updatePayments((payments) => {
-      payments.push({
-        m_payment_id: paymentId,
-        payment_type: paymentType,
-        amount: amount.toFixed(2),
-        item_name: itemName,
-        email_address: recipient || '',
-        status: 'PENDING',
-        premium: false,
-        created_at: new Date().toISOString()
-      });
-    });
-  } catch (error) {
-    console.error('Unable to record pending PayFast payment:', error);
-    return res.status(500).json({ success: false, message: 'Unable to initialize payment' });
-  }
-
-  const fieldsHtml = Object.entries(paymentFields)
-    .filter(([, value]) => value !== '')
-    .map(([name, value]) => `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`)
-    .join('\n');
-  const checkoutUrl = `${payFastBaseUrl()}/eng/process`;
-  return res.status(200).type('html').send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Redirecting to PayFast</title></head>
-<body><main><h1>Redirecting to PayFast</h1><p>Your payment is being prepared securely.</p>
-<form id="payfastCheckout" action="${escapeHtml(checkoutUrl)}" method="post">${fieldsHtml}<button type="submit">Continue to PayFast</button></form>
-<script>document.getElementById('payfastCheckout').submit();</script></main></body></html>`);
-});
-
-app.post('/payfast/notify', async (req, res) => {
-  const notification = req.body;
-  if (!notification || typeof notification !== 'object' ||
-      Object.values(notification).some((value) => typeof value !== 'string')) {
-    return res.status(400).json({ success: false, message: 'Invalid PayFast notification data' });
-  }
-  if (!process.env.PAYFAST_MERCHANT_ID || !isValidPayFastSignature(notification)) {
-    return res.status(400).json({ success: false, message: 'Invalid PayFast signature' });
-  }
-  if (notification.merchant_id !== process.env.PAYFAST_MERCHANT_ID) {
-    return res.status(400).json({ success: false, message: 'PayFast merchant ID mismatch' });
-  }
-  if (!notification.m_payment_id || !['COMPLETE', 'CANCELLED'].includes(notification.payment_status)) {
-    return res.status(400).json({ success: false, message: 'Invalid PayFast payment data' });
-  }
-
-  let payment;
-  try {
-    const payments = await readPayments();
-    payment = payments.find((entry) => entry.m_payment_id === notification.m_payment_id);
-  } catch (error) {
-    console.error('Unable to read payments for PayFast notification:', error);
-    return res.status(500).json({ success: false, message: 'Unable to read payment records' });
-  }
-  if (!payment) {
-    return res.status(404).json({ success: false, message: 'Payment reference not found' });
-  }
-  if (notification.payment_status === 'COMPLETE') {
-    const actualAmount = Number(notification.amount_gross);
-    if (!Number.isFinite(actualAmount) || Math.abs(actualAmount - Number(payment.amount)) > 0.01) {
-      return res.status(400).json({ success: false, message: 'PayFast amount mismatch' });
-    }
-    if (payment.status === 'COMPLETE' && payment.premium === true) return res.status(200).send('OK');
-  }
-
-  let confirmationResponse;
-  try {
-    confirmationResponse = await fetch(`${payFastBaseUrl()}/eng/query/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: payFastParameterString(notification, false),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!confirmationResponse.ok || (await confirmationResponse.text()).trim() !== 'VALID') {
-      return res.status(400).json({ success: false, message: 'PayFast could not confirm the notification' });
-    }
-  } catch (error) {
-    console.error('PayFast notification confirmation failed:', error);
-    return res.status(502).json({ success: false, message: 'Unable to confirm payment with PayFast' });
-  }
-
-  try {
-    await updatePayments((payments) => {
-      const record = payments.find((entry) => entry.m_payment_id === notification.m_payment_id);
-      if (!record) throw new Error('Payment reference not found during update');
-      if (notification.payment_status === 'COMPLETE') {
-        const paidAt = new Date();
-        Object.assign(record, {
-          status: 'COMPLETE',
-          premium: true,
-          premium_features: record.payment_type !== 'once-off'
-            ? ['unlimited_letters', 'email_delivery']
-            : ['one_letter', 'email_delivery'],
-          pf_payment_id: notification.pf_payment_id || '',
-          amount_gross: notification.amount_gross,
-          email_address: notification.email_address || record.email_address,
-          paid_at: paidAt.toISOString()
-        });
-        const accessExpiresAt = getAccessExpiration(record.payment_type, paidAt);
-        if (accessExpiresAt) record.access_expires_at = accessExpiresAt;
-      } else if (record.status !== 'COMPLETE') {
-        Object.assign(record, { status: 'CANCELLED', premium: false });
-      }
-    });
-  } catch (error) {
-    console.error('Unable to save PayFast notification:', error);
-    return res.status(500).json({ success: false, message: 'Unable to save payment confirmation' });
-  }
-
-  return res.status(200).send('OK');
-});
-
-app.get('/payfast/return', async (req, res) => {
-  const paymentId = typeof req.query.m_payment_id === 'string' ? req.query.m_payment_id : '';
-  if (!paymentId) {
-    return res.status(400).type('html').send(paymentStatusPage('Payment confirmation pending', 'We could not identify this payment.'));
-  }
-
-  try {
-    const payments = await readPayments();
-    const payment = payments.find((entry) => entry.m_payment_id === paymentId);
-    if (payment?.status === 'COMPLETE' && payment.premium === true) {
-      const expiryTimestamp = payment.access_expires_at ? Date.parse(payment.access_expires_at) : NaN;
-      const expiryDate = Number.isFinite(expiryTimestamp)
-        ? new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(expiryTimestamp)
-        : '';
-      const accessActive = hasActivePremiumAccess(payment);
-      const message = accessActive
-        ? `Premium access is active for this payment.${expiryDate ? ` Annual access is available for 365 days, through ${expiryDate}.` : ''}`
-        : `Annual access expired${expiryDate ? ` on ${expiryDate}` : ''}.`;
-      return res.type('html').send(paymentStatusPage(
-        accessActive ? 'Payment Successful' : 'Annual Access Expired',
-        message,
-        payment.m_payment_id
-      ));
-    }
-    return res.status(202).type('html').send(paymentStatusPage(
-      'Payment confirmation pending',
-      'Premium access will be enabled after PayFast confirms the payment.',
-      paymentId
-    ));
-  } catch (error) {
-    console.error('Unable to read payment for PayFast return:', error);
-    return res.status(500).type('html').send(paymentStatusPage(
-      'Payment status unavailable',
-      'We could not check your payment status. Please try again shortly.',
-      paymentId
-    ));
-  }
-});
-
-app.get('/payfast/cancel', (req, res) => res.type('html').send(paymentStatusPage(
-  'Payment Cancelled',
-  'The payment was cancelled. No premium access was activated.'
-)));
 
 app.get('/admin/stats', (req, res) => respondWithAdminHistory(res, 'stats', (history) => {
   const now = new Date();
@@ -1590,7 +1262,6 @@ async function startServer() {
   initializeDocumentDatabase();
   await Promise.all([
     ensureJsonArrayFile(historyPath),
-    ensureJsonArrayFile(paymentsPath),
     ensureJsonArrayFile(secureLettersPath),
     ensureJsonArrayFile(verificationAuditPath),
     issuerAuth.initialize()

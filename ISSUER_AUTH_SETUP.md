@@ -19,9 +19,9 @@ Production uses `DATA_DIR=/var/data/usevs`. Attach a Railway volume to the servi
 ## Railway Deployment
 
 1. Create a Railway project from this repository and deploy the service using the included `railway.json` configuration. The start command is `npm start`.
-2. Add a persistent volume to the service with mount path `/var/data/usevs`. The application stores account records, encrypted letters, payment history, and audit logs in this directory.
-3. Set the environment variables below in the Railway service. Keep SMTP credentials, `DATA_ENCRYPTION_KEY`, `ISSUER_REVIEW_TOKEN`, and PayFast credentials private. Generate fresh encryption and review tokens if this is a new production environment; preserve existing values when migrating an existing deployment.
-4. Configure `usevs.railway.app` as the public domain if it is available to your Railway account. Otherwise, use the Railway-generated service domain (typically `*.up.railway.app`) or a custom domain you control, and update `PUBLIC_BASE_URL` and the PayFast return, cancel, and notify URLs to match.
+2. Add a persistent volume to the service with mount path `/var/data/usevs`. The application stores account records, encrypted letters, and audit logs in this directory.
+3. Set the environment variables below in the Railway service. Keep SMTP credentials, `DATA_ENCRYPTION_KEY`, and `ISSUER_REVIEW_TOKEN` private. Generate fresh encryption and review tokens if this is a new production environment; preserve existing values when migrating an existing deployment.
+4. Configure `usevs.railway.app` as the public domain if it is available to your Railway account. Otherwise, use the Railway-generated service domain (typically `*.up.railway.app`) or a custom domain you control, and update `PUBLIC_BASE_URL` to match.
 5. Confirm the deployment passes its `/landing` health check before directing users to `https://usevs.railway.app`.
 
 Required runtime variables:
@@ -38,22 +38,9 @@ SMTP_PASS=<SMTP password>
 SMTP_FROM=<sender email>
 DATA_ENCRYPTION_KEY=<existing or newly generated 32-byte Base64 key>
 ISSUER_REVIEW_TOKEN=<existing or newly generated review token>
-PAYFAST_MODE=sandbox
-PAYFAST_SANDBOX=true
-PAYFAST_MERCHANT_ID=<PayFast merchant ID>
-PAYFAST_MERCHANT_KEY=<PayFast merchant key>
-PAYFAST_PASSPHRASE=<PayFast passphrase>
-PAYFAST_RETURN_URL=https://usevs.railway.app/payfast/return
-PAYFAST_CANCEL_URL=https://usevs.railway.app/payfast/cancel
-PAYFAST_NOTIFY_URL=https://usevs.railway.app/payfast/notify
-PAYFAST_ONCE_OFF_AMOUNT=4.99
-PAYFAST_SUBSCRIPTION_AMOUNT=24.99
-PAYFAST_ANNUAL_AMOUNT=269.99
-PAYFAST_SUBSCRIPTION_FREQUENCY=3
-PAYFAST_SUBSCRIPTION_CYCLES=0
 ```
 
-The annual plan uses PayFast's annual recurring frequency and grants 365 days of access from each confirmed annual payment. `PAYFAST_ANNUAL_AMOUNT` defaults to `269.99`. Railway manages `PORT`; do not hard-code it in production. Set `PAYFAST_SANDBOX=false` and configure live merchant credentials only after the integration has been verified.
+Railway manages `PORT`; do not hard-code it in production.
 
 ## Employer Review
 
