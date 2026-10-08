@@ -86,6 +86,23 @@
     if (event) event.preventDefault();
     status.textContent = "Loading records…";
     const params = new URLSearchParams(new FormData(form));
+    const displayDate = form.elements.date.value;
+    if (displayDate) {
+      const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayDate);
+      if (!match) {
+        status.textContent = "Enter dates in DD/MM/YY format.";
+        return;
+      }
+      const [, dayText, monthText, yearText] = match;
+      const shortYear = Number(yearText);
+      const year = shortYear >= 50 ? 1900 + shortYear : 2000 + shortYear;
+      const date = new Date(Date.UTC(year, Number(monthText) - 1, Number(dayText)));
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== Number(monthText) - 1 || date.getUTCDate() !== Number(dayText)) {
+        status.textContent = "Enter a valid calendar date.";
+        return;
+      }
+      params.set("date", `${year}-${monthText}-${dayText}`);
+    }
     try {
       const response = await fetch(`/api/letters?${params}`, { credentials: "same-origin" });
       const result = await response.json();

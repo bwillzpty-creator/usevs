@@ -1,0 +1,21 @@
+# US-EVS (US Employment Verification System)
+
+> US-EVS is an independent web platform for authorized employers to create, store, export, and verify employment verification letters.
+
+## Platform
+- Employer accounts require corporate email confirmation, business review, and HR sign-in with a one-time email code.
+- Authorized HR signatories can create employment verification letters with a reference ID, timestamp, QR verification link, signature options, privacy redaction options, and PDF or Word export.
+- Recipients can check a document reference through the public verification lookup.
+- Issued employee information is encrypted at rest and retained for a limited period described in the privacy policy.
+
+## Important limitations
+- US-EVS is not a government agency and is not endorsed by a government agency.
+- US-EVS currently creates employer-issued employment verification letters for US-based verification needs. It does not prepare, validate, or submit government employment forms beyond the employer-issued record workflow.
+- A reference lookup confirms the US-EVS record state; it does not independently validate the truth of information supplied by an employer.
+- Payment initiation is not enabled for charging users. The payment ledger is infrastructure only.
+
+## Public information
+- Home: https://www.us-evs.com/
+- Terms: https://www.us-evs.com/public/terms-and-conditions.html
+- Privacy: https://www.us-evs.com/public/privacy-policy.html
+- Support: https://www.us-evs.com/public/contact-support.html

@@ -1,5 +1,19 @@
 let generatedLetter = "";
 
+function toIsoDate(displayValue) {
+  if (!displayValue) return "";
+  const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayValue);
+  if (!match) throw new Error("Enter dates in DD/MM/YY format.");
+  const [, day, month, shortYear] = match;
+  const yearNumber = Number(shortYear);
+  const year = yearNumber >= 50 ? 1900 + yearNumber : 2000 + yearNumber;
+  const parsed = new Date(Date.UTC(year, Number(month) - 1, Number(day)));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== Number(month) - 1 || parsed.getUTCDate() !== Number(day)) {
+    throw new Error("Enter a valid calendar date.");
+  }
+  return `${year}-${month}-${day}`;
+}
+
 const issuerLogoutButton = document.getElementById("issuerLogoutButton");
 if (issuerLogoutButton) {
   fetch("/api/auth/session", { credentials: "same-origin" })
@@ -116,8 +130,8 @@ if (verifyForm) {
     const data = {
       employeeName: document.getElementById("employeeName").value,
       jobTitle: document.getElementById("jobTitle").value,
-      startDate: document.getElementById("startDate").value,
-      endDate: document.getElementById("endDate").value
+      startDate: toIsoDate(document.getElementById("startDate").value),
+      endDate: toIsoDate(document.getElementById("endDate").value)
     };
 
     button.disabled = true;
@@ -235,9 +249,9 @@ if (adminDashboard) {
   }
 
   function downloadLetter(entry) {
-    if (typeof entry.letter !== "string" || !entry.letter) return;
+    if (typeof entry.letter !== "string" || !entry.letter || !/^[A-Z]{2,5}$/.test(entry.digitalInitials || "")) return;
 
-    const downloadUrl = URL.createObjectURL(LetterPdf.createPdfBlob(entry.letter));
+    const downloadUrl = URL.createObjectURL(LetterPdf.createPdfBlob(entry.letter, undefined, entry.digitalInitials));
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = "employment_verification_letter.pdf";

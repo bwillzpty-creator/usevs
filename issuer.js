@@ -86,6 +86,9 @@ document.getElementById('employerForm').addEventListener('submit', async (event)
   showMessage(status, 'Creating the pending employer account...');
   try {
     const businessDocument = await readBusinessDocument(form.elements.businessDocument.files[0]);
+    if (businessDocument && !form.elements.contentLiabilityAccepted.checked) {
+      throw new Error('Accept responsibility for the uploaded document before continuing.');
+    }
     const result = await requestJson('/api/employers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +101,9 @@ document.getElementById('employerForm').addEventListener('submit', async (event)
         officerTitle: form.elements.officerTitle.value,
         officerEmail: form.elements.officerEmail.value,
         officerPassword: form.elements.officerPassword.value,
-        businessDocument
+        businessDocument,
+        ageConfirmed: form.elements.ageConfirmed.checked,
+        contentLiabilityAccepted: form.elements.contentLiabilityAccepted.checked
       })
     });
     form.reset();

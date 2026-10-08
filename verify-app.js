@@ -16,6 +16,22 @@
   const value = (name, fallback) => form.elements[name]?.value.trim() || fallback;
   const setText = (id, text) => { document.getElementById(id).textContent = text; };
 
+  function toIsoDate(displayValue) {
+    if (!displayValue) return '';
+    const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayValue);
+    if (!match) throw new Error('Enter dates in DD/MM/YY format.');
+    const [, dayText, monthText, yearText] = match;
+    const day = Number(dayText);
+    const month = Number(monthText);
+    const shortYear = Number(yearText);
+    const year = shortYear >= 50 ? 1900 + shortYear : 2000 + shortYear;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+      throw new Error('Enter a valid calendar date.');
+    }
+    return `${year}-${monthText}-${dayText}`;
+  }
+
   function updatePreview() {
     const employee = value("employeeName", "the employee");
     const lifecycle = value("lifecycle", "Current Employee");
@@ -244,10 +260,24 @@
     status.textContent = "Preparing encrypted document record…";
     generateButton.disabled = true;
     try {
+      const selectedUploads = [
+        ...document.getElementById("attachments").files,
+        ...["employerLogo", "signatureFile"].map((id) => document.getElementById(id).files[0]).filter(Boolean)
+      ];
+      if (selectedUploads.length && !document.getElementById("contentLiabilityAccepted").checked) {
+        throw new Error("Accept the uploaded-content responsibility terms before uploading documents.");
+      }
+      form.querySelectorAll("[data-na-on-export]").forEach((input) => {
+        if (!input.value.trim()) input.value = "N/A";
+      });
       const attachments = await Promise.all(Array.from(document.getElementById("attachments").files, readFile));
       const logo = document.getElementById("employerLogo").files[0];
       const signatureFile = document.getElementById("signatureFile").files[0];
       const data = Object.fromEntries(new FormData(form).entries());
+      data.startDate = toIsoDate(data.startDate);
+      data.endDate = toIsoDate(data.endDate);
+      data.commissionExpiration = toIsoDate(data.commissionExpiration);
+      data.contentLiabilityAccepted = document.getElementById("contentLiabilityAccepted").checked;
       data.overtimeEligible = form.elements.overtimeEligible.value;
       data.signatureMode = form.elements.signatureMode.value;
       data.signatureData = data.signatureMode === "draw" && hasSignature ? canvas.toDataURL("image/png") : "";

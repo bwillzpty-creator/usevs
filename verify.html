@@ -33,24 +33,25 @@
     @media print{body{background:white}.form-column,header,.heading,.notice,.preview-head,.export-actions,.app-footer{display:none!important}.layout{display:block}.preview-card{position:static;border:0;box-shadow:none}.paper{margin:0;border:0;box-shadow:none;min-height:0}}
   </style>
   <script src="/letter-template.js" defer></script>
+  <script src="/payment-client.js" defer></script>
   <script src="/verify-app.js" defer></script>
 </head>
 <body>
   <header>
     <a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a>
-    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/lookup">Verify ID</a><a href="/dashboard">History</a></nav>
+    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/lookup">Verify ID</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a></nav>
   </header>
   <main>
     <div class="heading"><div><h1>Create an employment verification letter</h1><p>Complete the verified employer and employee record. Preview updates as you work.</p></div><button type="button" class="mobile-preview-trigger" id="openPreviewTop">Preview letter</button><a href="/issuer">Employer sign-in</a></div>
     <div class="notice" id="authNotice">Document issuance requires a verified HR sign-in. You can complete and preview the form first; sign in before generating. <a href="/issuer">Sign in to continue</a></div>
     <div class="layout">
-      <form id="verifyForm" class="form-column">
+      <form id="verifyForm" class="form-column" data-private data-hj-suppress data-fs-exclude>
         <div class="card">
           <fieldset>
             <legend>01 · Employer information</legend>
             <div class="fields">
               <div class="field"><label for="employerName">Employer legal business name</label><input id="employerName" name="employerName" required maxlength="160"></div>
-              <div class="field"><label for="ein">EIN / Tax ID</label><input id="ein" name="ein" autocomplete="off" placeholder="XX-XXXXXXX" maxlength="10"></div>
+              <div class="field"><label for="ein">EIN / Tax ID</label><input id="ein" name="ein" autocomplete="off" placeholder="XX-XXXXXXX" maxlength="10" data-na-on-export></div>
               <div class="field wide"><label for="employerLogo">Corporate logo (optional)</label><input id="employerLogo" type="file" accept="image/png,image/jpeg"><p class="helper">Displayed in the letter preview. Max 1 MB.</p></div>
               <div class="field wide"><label for="employerAddress">Physical corporate address</label><input id="employerAddress" name="employerAddress" required maxlength="240" placeholder="Street, City, State ZIP"></div>
               <div class="field"><label for="employerPhone">Main business phone</label><input id="employerPhone" name="employerPhone" type="tel" required maxlength="40"></div>
@@ -60,9 +61,9 @@
           <fieldset>
             <legend>02 · Recipient and purpose</legend>
             <div class="fields">
-              <div class="field"><label for="recipientName">Recipient name or organization</label><input id="recipientName" name="recipientName" maxlength="160"></div>
+              <div class="field"><label for="recipientName">Recipient name or organization</label><input id="recipientName" name="recipientName" maxlength="160" data-na-on-export></div>
               <div class="field"><label for="recipientEmail">Recipient email (optional)</label><input id="recipientEmail" name="recipientEmail" type="email" maxlength="160"></div>
-              <div class="field wide"><label for="recipientAddress">Recipient mailing address</label><input id="recipientAddress" name="recipientAddress" maxlength="240"></div>
+              <div class="field wide"><label for="recipientAddress">Recipient mailing address</label><input id="recipientAddress" name="recipientAddress" maxlength="240" data-na-on-export></div>
               <div class="field wide"><label for="purpose">Verification purpose</label><select id="purpose" name="purpose" required><option value="Residential Tenancy">Residential Tenancy</option><option value="Mortgage or Commercial Loan">Mortgage or Commercial Loan</option><option value="USCIS Immigration">USCIS Immigration</option><option value="Government Background Check">Government Background Check</option><option value="Standard Corporate Reference">Standard Corporate Reference</option></select></div>
             </div>
           </fieldset>
@@ -75,19 +76,19 @@
               <div class="field"><label for="jobTitle">Job title</label><input id="jobTitle" name="jobTitle" required maxlength="120"></div>
               <div class="field"><label for="department">Department</label><input id="department" name="department" required maxlength="120"></div>
               <div class="field"><label for="workStatus">Work status</label><select id="workStatus" name="workStatus"><option>Full-Time</option><option>Part-Time</option><option>Independent Contractor (1099)</option><option>Temporary</option></select></div>
-              <div class="field"><label for="startDate">Employment start date</label><input id="startDate" name="startDate" type="date" required></div>
-              <div class="field" id="separationField" hidden><label for="endDate">Separation date</label><input id="endDate" name="endDate" type="date"></div>
+              <div class="field"><label for="startDate">Employment start date</label><input id="startDate" name="startDate" type="text" inputmode="numeric" placeholder="DD/MM/YY" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{2}" maxlength="8" required></div>
+              <div class="field" id="separationField" hidden><label for="endDate">Separation date</label><input id="endDate" name="endDate" type="text" inputmode="numeric" placeholder="DD/MM/YY" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{2}" maxlength="8"></div>
               <div class="field"><label for="rehireEligibility">Rehire eligibility</label><select id="rehireEligibility" name="rehireEligibility"><option>Eligible</option><option>Not Eligible</option><option>Conditional</option></select></div>
             </div>
           </fieldset>
           <fieldset>
             <legend>04 · Compensation and payroll</legend>
             <div class="fields">
-              <div class="field"><label for="basePay">Base salary or hourly wage</label><input id="basePay" name="basePay" maxlength="60" placeholder="$72,000 annually"></div>
+              <div class="field"><label for="basePay">Base salary or hourly wage</label><input id="basePay" name="basePay" maxlength="60" placeholder="$72,000 annually" data-na-on-export></div>
               <div class="field"><label for="payFrequency">Pay frequency</label><select id="payFrequency" name="payFrequency"><option>Weekly</option><option>Bi-Weekly</option><option>Semi-Monthly</option><option>Monthly</option><option>Annual</option></select></div>
               <div class="field"><label for="averageHours">Average weekly hours</label><input id="averageHours" name="averageHours" type="number" min="0" max="168" step="0.5"></div>
-              <div class="field"><label for="ytdGross">Year-to-date gross pay</label><input id="ytdGross" name="ytdGross" maxlength="60"></div>
-              <div class="field"><label for="bonus">Annual bonus, commission, or overtime</label><input id="bonus" name="bonus" maxlength="60"></div>
+              <div class="field"><label for="ytdGross">Year-to-date gross pay</label><input id="ytdGross" name="ytdGross" maxlength="60" data-na-on-export></div>
+              <div class="field"><label for="bonus">Annual bonus, commission, or overtime</label><input id="bonus" name="bonus" maxlength="60" data-na-on-export></div>
               <div class="field"><span>Overtime eligibility</span><div class="inline"><label><input type="radio" name="overtimeEligible" value="Yes" checked> Yes</label><label><input type="radio" name="overtimeEligible" value="No"> No</label></div></div>
               <div class="field wide"><span>Privacy redaction</span><div class="inline"><label><input id="redactSsn" type="checkbox"> Fully redact SSN (otherwise show last 4 only)</label><label><input id="redactCompensation" type="checkbox"> Redact compensation figures</label></div></div>
             </div>
@@ -110,13 +111,14 @@
                 <div id="uploadPanel" class="signature-panel" hidden><input id="signatureFile" type="file" accept="image/png,image/jpeg"></div>
                 <div id="typePanel" class="signature-panel" hidden><input id="typedSignature" maxlength="120" placeholder="Type the representative's full name"></div>
               </div>
+              <div class="field"><label for="digitalInitials">Digital initials (printed on every PDF page)</label><input id="digitalInitials" name="digitalInitials" autocomplete="off" pattern="[A-Za-z]{2,5}" minlength="2" maxlength="5" required></div>
               <div class="field wide"><div class="inline"><label><input id="corporateSeal" type="checkbox"> Include digital corporate seal</label><label><input id="liabilityDisclaimer" type="checkbox" checked> Include employer liability disclaimer</label><label><input id="notaryBlock" type="checkbox"> Include notary acknowledgement</label></div></div>
-              <div id="notaryFields" class="field wide" hidden><label for="notaryJurisdiction">Notary state / county jurisdiction</label><input id="notaryJurisdiction" maxlength="160" placeholder="State of ___, County of ___"><label for="commissionExpiration">Commission expiration</label><input id="commissionExpiration" type="date"></div>
+              <div id="notaryFields" class="field wide" hidden><label for="notaryJurisdiction">Notary state / county jurisdiction</label><input id="notaryJurisdiction" name="notaryJurisdiction" maxlength="160" placeholder="State of ___, County of ___"><label for="commissionExpiration">Commission expiration (DD/MM/YY)</label><input id="commissionExpiration" name="commissionExpiration" type="text" inputmode="numeric" placeholder="DD/MM/YY" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{2}" maxlength="8"></div>
             </div>
           </fieldset>
           <fieldset>
             <legend>06 · Document attachments</legend>
-            <div class="field"><label for="attachments">Attach pay stubs or W-2 forms</label><input id="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"><p class="attachments-note">Attachments are encrypted with the record and included when emailed. Total upload limit: 4 MB.</p></div>
+            <div class="field"><label for="attachments">Attach pay stubs or W-2 forms</label><input id="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"><p class="attachments-note">Upload only material you own or are authorized to share. You are responsible for its legality, accuracy, and respect for others' rights. Attachments are encrypted with the record. Total upload limit: 4 MB.</p><label class="inline"><input id="contentLiabilityAccepted" type="checkbox"> I accept responsibility for the content I upload.</label></div>
           </fieldset>
           <div class="form-actions"><button class="primary" type="submit" id="generateButton">Generate verification letter</button><p id="formStatus" class="status" role="status" aria-live="polite"></p></div>
         </div>

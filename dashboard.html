@@ -26,7 +26,7 @@
   <script src="/dashboard.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/lookup">Verify ID</a></nav></header>
+  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/lookup">Verify ID</a></nav></header>
   <main>
     <div class="head"><div><h1>Verification record history</h1><p>Search and manage your organization’s issued letters. Employee details remain encrypted at rest.</p></div><a href="/verify">+ New letter</a></div>
     <div class="notice" id="authNotice">Sign in with a verified HR account to view your organization's records. <a href="/issuer">Employer sign-in</a></div>
@@ -34,7 +34,7 @@
       <form id="filters" class="filters">
         <label>Document ID<input name="referenceNumber" placeholder="EV-2026-0001"></label>
         <label>Employee name<input name="employeeName" placeholder="Search name"></label>
-        <label>Date<input name="date" type="date"></label>
+        <label>Date<input name="date" type="text" inputmode="numeric" placeholder="DD/MM/YY" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{2}" maxlength="8"></label>
         <label>Purpose<select name="purpose"><option value="">All purposes</option><option>Residential Tenancy</option><option>Mortgage or Commercial Loan</option><option>USCIS Immigration</option><option>Government Background Check</option><option>Standard Corporate Reference</option></select></label>
         <button type="submit">Search records</button>
       </form>

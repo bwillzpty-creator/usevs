@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createVerificationParagraphs } = require('../letter-template');
+const { createPdfBuffer } = require('../letter-pdf');
 
 const details = {
   employeeName: 'Alex Morgan',
@@ -42,4 +43,12 @@ test('includes the specified separation and rehire sentences for a former employ
     paragraphOne,
     'This statement provides official employment verification for Alex Morgan. Alex Morgan held the position of Operations Analyst within Operations, having commenced active service on 2024-03-01. Employment status is classified as Full-Time. Separation occurred on 2026-02-28. Rehire eligibility status is recorded as Eligible.'
   );
+});
+
+test('stamps digital initials on every generated PDF page', () => {
+  const text = Array.from({ length: 100 }, (_, index) => `Employment record detail ${index + 1}`).join('\n');
+  const pdf = createPdfBuffer(text, undefined, 'AB');
+  const pageCount = Number(pdf.toString('ascii').match(/\/Count (\d+)/)[1]);
+  assert.ok(pageCount > 1);
+  assert.equal((pdf.toString('ascii').match(/Digital initials: AB/g) || []).length, pageCount);
 });

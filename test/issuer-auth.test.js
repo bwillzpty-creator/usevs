@@ -15,7 +15,8 @@ test('review account is seeded idempotently and still requires email OTP', async
     emailTransport: { sendMail: async (message) => messages.push(message) },
     emailFrom: 'verification@example.test',
     publicBaseUrl: 'https://verification.example.test',
-    reviewToken: ''
+    reviewToken: '',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
   });
   await auth.initialize();
 
@@ -43,7 +44,8 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
     emailTransport: { sendMail: async (message) => messages.push(message) },
     emailFrom: 'verification@example.test',
     publicBaseUrl: 'https://verification.example.test',
-    reviewToken: 'test-review-token-with-more-than-32-characters'
+    reviewToken: 'test-review-token-with-more-than-32-characters',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
   });
   await auth.initialize();
 
@@ -58,6 +60,17 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
     officerPassword: 'long-test-password-123'
   }, '127.0.0.1'), /matching corporate emails/);
 
+  await assert.rejects(auth.registerEmployer({
+    legalBusinessName: 'Northstar Group LLC',
+    businessAddress: '18 Market Street',
+    businessPhone: '555-0100',
+    businessEmail: 'owner@northstar.example',
+    officerName: 'Alex Morgan',
+    officerTitle: 'HR Director',
+    officerEmail: 'hr@northstar.example',
+    officerPassword: 'long-test-password-123'
+  }, '127.0.0.1'), /at least 18 years old/);
+
   const documentContents = Buffer.from('%PDF-1.4\nBusiness registration evidence').toString('base64');
   const registration = await auth.registerEmployer({
     legalBusinessName: 'Northstar Group LLC',
@@ -68,9 +81,13 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
     officerTitle: 'HR Director',
     officerEmail: 'hr@northstar.example',
     officerPassword: 'long-test-password-123',
-    businessDocument: `data:application/pdf;base64,${documentContents}`
+    businessDocument: `data:application/pdf;base64,${documentContents}`,
+    ageConfirmed: true,
+    contentLiabilityAccepted: true
   }, '127.0.0.1');
 
+  assert.match(messages[0].text, /Physical mailing address: 100 Example Avenue/);
+  assert.match(messages[0].text, /subject=Unsubscribe/);
   const confirmationUrl = messages[0].text.match(/https:\/\/\S+/)[0];
   const confirmationToken = new URL(confirmationUrl).searchParams.get('token');
   assert.equal(await auth.confirmEmployerEmail(confirmationToken), true);
@@ -93,6 +110,8 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
   assert.equal(auth.isValidReviewToken('wrong-token'), false);
 
   const challenge = await auth.beginSignIn('hr@northstar.example', 'long-test-password-123', '127.0.0.1');
+  assert.match(messages[1].text, /Physical mailing address: 100 Example Avenue/);
+  assert.match(messages[1].text, /subject=Unsubscribe/);
   const code = messages[1].text.match(/\b(\d{6})\b/)[1];
   const incorrectCode = code === '000000' ? '000001' : '000000';
   await assert.rejects(auth.completeSignIn(challenge.challengeId, incorrectCode), /invalid or expired/);

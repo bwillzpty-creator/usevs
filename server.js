@@ -9,10 +9,13 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { DatabaseSync } = require('node:sqlite');
 const QRCode = require('qrcode');
+const archiver = require('archiver');
 const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx');
 const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
+const { createPaymentLedger, verifyWebhookSignature } = require('./payment-ledger');
+const { evaluateStateRules, getReverificationThresholds, parseDmyy, validateDocumentChoice, validateRemoteProcedure } = require('./i9-rules');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -40,13 +43,15 @@ let referenceSequence = 0;
 let historyWriteQueue = Promise.resolve();
 let letterDataWriteQueue = Promise.resolve();
 let database;
+let paymentLedger;
 const issuerAuth = new IssuerAuth({
   storePath: issuerAccountsPath,
   encryptionKey: process.env.DATA_ENCRYPTION_KEY,
   emailTransport,
   emailFrom,
   publicBaseUrl: process.env.PUBLIC_BASE_URL,
-  reviewToken: process.env.ISSUER_REVIEW_TOKEN
+  reviewToken: process.env.ISSUER_REVIEW_TOKEN,
+  businessPostalAddress: process.env.BUSINESS_POSTAL_ADDRESS
 });
 
 async function ensureJsonArrayFile(filePath) {
@@ -103,9 +108,62 @@ function initializeDocumentDatabase() {
       document_id TEXT PRIMARY KEY,
       reserved_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS i9_records (
+      record_id TEXT PRIMARY KEY,
+      employer_id TEXT NOT NULL,
+      encrypted_form_data TEXT NOT NULL,
+      work_state TEXT NOT NULL,
+      employee_count INTEGER NOT NULL,
+      hire_date TEXT NOT NULL,
+      authorization_expiration TEXT,
+      remote_procedure INTEGER NOT NULL,
+      live_video_confirmed INTEGER NOT NULL,
+      e_verify_requested INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      status TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS i9_attachments (
+      attachment_id TEXT PRIMARY KEY,
+      record_id TEXT NOT NULL REFERENCES i9_records(record_id),
+      filename TEXT NOT NULL,
+      media_type TEXT NOT NULL,
+      encrypted_contents TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS i9_audit_events (
+      event_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      record_id TEXT NOT NULL,
+      employer_id TEXT NOT NULL,
+      actor_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      details_json TEXT NOT NULL,
+      recorded_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS i9_reverification_alerts (
+      alert_id TEXT PRIMARY KEY,
+      record_id TEXT NOT NULL REFERENCES i9_records(record_id),
+      employer_id TEXT NOT NULL,
+      threshold_days INTEGER NOT NULL CHECK (threshold_days IN (90, 60, 30)),
+      due_at TEXT NOT NULL,
+      sent_at TEXT,
+      UNIQUE(record_id, threshold_days)
+    );
+    CREATE TABLE IF NOT EXISTS i9_section3_drafts (
+      draft_id TEXT PRIMARY KEY,
+      record_id TEXT NOT NULL REFERENCES i9_records(record_id),
+      employer_id TEXT NOT NULL,
+      encrypted_draft TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(record_id)
+    );
     CREATE INDEX IF NOT EXISTS documents_by_employer_date ON documents(employer_id, generated_at);
     CREATE INDEX IF NOT EXISTS audit_by_employer_status ON audit_logs(employer_id, status);
     CREATE INDEX IF NOT EXISTS attachments_by_document ON attachments(document_id);
+    CREATE INDEX IF NOT EXISTS i9_records_by_employer ON i9_records(employer_id, created_at);
+    CREATE INDEX IF NOT EXISTS i9_expiration_by_date ON i9_records(authorization_expiration);
+    CREATE TRIGGER IF NOT EXISTS i9_audit_events_no_update
+      BEFORE UPDATE ON i9_audit_events BEGIN SELECT RAISE(ABORT, 'i9_audit_events is append-only'); END;
+    CREATE TRIGGER IF NOT EXISTS i9_audit_events_no_delete
+      BEFORE DELETE ON i9_audit_events BEGIN SELECT RAISE(ABORT, 'i9_audit_events is append-only'); END;
   `);
 }
 
@@ -376,13 +434,36 @@ function appendLetterHistory(entry) {
 // Allow server to read JSON from POST requests
 app.use(cors());
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '7mb' }));
-app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   return next();
 });
+
+app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }), (req, res) => {
+  const secret = process.env.PAYMENT_WEBHOOK_SECRET;
+  if (!secret) return res.status(503).json({ success: false, message: 'Payment webhook verification is not configured.' });
+  if (!verifyWebhookSignature(req.body, req.get('x-payment-signature'), secret)) {
+    return res.status(401).json({ success: false, message: 'Webhook signature is invalid.' });
+  }
+  let event;
+  try {
+    event = JSON.parse(req.body.toString('utf8'));
+    const result = paymentLedger.appendWebhook({
+      providerEventId: event.eventId || event.id,
+      paymentId: event.paymentId,
+      eventType: event.eventType || event.type,
+      payload: event,
+      occurredAt: event.occurredAt
+    });
+    return res.status(200).json({ success: true, duplicate: result.duplicate, payment: result.payment });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error instanceof SyntaxError ? 'Webhook body is invalid JSON.' : error.message });
+  }
+});
+
+app.use(express.json({ limit: '7mb' }));
+app.use(express.urlencoded({ extended: false }));
 
 function isSameOriginRequest(req) {
   const origin = req.get('origin');
@@ -428,6 +509,457 @@ function isValidReviewer(req) {
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
   return issuerAuth.isValidReviewToken(token);
 }
+
+function appendI9AuditEvent(recordId, employerId, actorId, eventType, details = {}) {
+  database.prepare(`INSERT INTO i9_audit_events
+    (record_id, employer_id, actor_id, event_type, details_json, recorded_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(recordId, employerId, actorId, eventType, JSON.stringify(details), new Date().toISOString());
+}
+
+function getI9Record(recordId, employerId) {
+  const record = database.prepare(`SELECT record_id AS recordId, employer_id AS employerId,
+    encrypted_form_data AS encryptedFormData, authorization_expiration AS authorizationExpiration,
+    created_at AS createdAt, status FROM i9_records WHERE record_id = ? AND employer_id = ?`)
+    .get(recordId, employerId);
+  if (!record) return null;
+  record.formData = JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(record.encryptedFormData)));
+  return record;
+}
+
+function createSection3Draft(record) {
+  const existing = database.prepare('SELECT draft_id FROM i9_section3_drafts WHERE record_id = ?').get(record.recordId);
+  if (existing) return false;
+  const draft = {
+    title: 'Supplement B (formerly Section 3) Reverification Worksheet Draft',
+    notice: 'Not an official USCIS Form I-9. Transfer verified information to the current official Supplement B and complete reverification before expiration.',
+    employeeName: record.formData.employeeName,
+    hireDate: record.formData.hireDate,
+    workState: record.formData.workState,
+    authorizationExpiration: record.authorizationExpiration,
+    generatedAt: new Date().toISOString(),
+    employerAction: 'Examine acceptable, unexpired reverification documentation selected by the employee and complete the current USCIS Supplement B.'
+  };
+  const now = new Date().toISOString();
+  database.prepare(`INSERT INTO i9_section3_drafts (draft_id, record_id, employer_id, encrypted_draft, created_at)
+    VALUES (?, ?, ?, ?, ?)`)
+    .run(crypto.randomUUID(), record.recordId, record.employerId,
+      JSON.stringify(issuerAuth.encryptRetainedSensitive(JSON.stringify(draft))), now);
+  appendI9AuditEvent(record.recordId, record.employerId, 'system', 'section3_draft_created', { authorizationExpiration: record.authorizationExpiration });
+  return true;
+}
+
+async function processI9ExpirationAlerts() {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const dueAlerts = database.prepare(`SELECT alert_id AS alertId, record_id AS recordId,
+    employer_id AS employerId, threshold_days AS thresholdDays
+    FROM i9_reverification_alerts WHERE due_at <= ? AND sent_at IS NULL
+    ORDER BY due_at, threshold_days DESC`).all(nowIso);
+  if (!dueAlerts.length) return;
+
+  const store = await issuerAuth.readStore();
+  for (const alert of dueAlerts) {
+    const record = getI9Record(alert.recordId, alert.employerId);
+    if (!record) continue;
+    if (alert.thresholdDays === 90 || alert.thresholdDays === 60 || alert.thresholdDays === 30) createSection3Draft(record);
+    const employer = store.employers.find((entry) => entry.id === alert.employerId && entry.status === 'verified');
+    if (!emailTransport || !employer?.businessEmail) continue;
+    try {
+      await emailTransport.sendMail({
+        from: emailFrom,
+        to: employer.businessEmail,
+        subject: `Work authorization expires within ${alert.thresholdDays} days`,
+        text: `Work authorization record ${record.recordId} expires on ${record.authorizationExpiration}. Sign in at ${process.env.PUBLIC_BASE_URL || ''}/i9 and review the employee's Supplement B (formerly Section 3) worksheet. Complete the current USCIS form before the expiration date.${issuerAuth.getEmailFooter()}`
+      });
+      database.prepare('UPDATE i9_reverification_alerts SET sent_at = ? WHERE alert_id = ? AND sent_at IS NULL').run(nowIso, alert.alertId);
+      appendI9AuditEvent(alert.recordId, alert.employerId, 'system', 'reverification_notice_sent', { thresholdDays: alert.thresholdDays });
+    } catch (error) {
+      console.error('Unable to send I-9 reverification notice:', error);
+    }
+  }
+}
+
+app.get('/i9', async (req, res) => {
+  try {
+    const session = await issuerAuth.getSession(req);
+    if (!session) return res.redirect('/auth');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.sendFile(path.join(__dirname, 'i9.html'));
+  } catch (error) {
+    console.error('Unable to validate I-9 workspace session:', error);
+    return res.status(503).send('Employer sign-in is temporarily unavailable.');
+  }
+});
+app.get('/i9.js', (req, res) => res.sendFile(path.join(__dirname, 'i9.js')));
+
+app.post('/api/i9/rules', requireIssuerSession, (req, res) => {
+  try {
+    const result = evaluateStateRules(req.body || {});
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/i9/records', requireIssuerSession, (req, res) => {
+  try {
+    const rows = database.prepare(`SELECT record_id AS recordId, encrypted_form_data AS encryptedFormData,
+      work_state AS workState, authorization_expiration AS authorizationExpiration, created_at AS createdAt
+      FROM i9_records WHERE employer_id = ? ORDER BY created_at DESC`).all(req.issuerContext.employer.id);
+    const records = rows.map((row) => {
+      const formData = JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(row.encryptedFormData)));
+      return {
+        recordId: row.recordId,
+        employeeName: formData.employeeName,
+        workState: row.workState,
+        authorizationExpiration: row.authorizationExpiration,
+        createdAt: row.createdAt,
+        hasSection3Draft: Boolean(database.prepare('SELECT 1 FROM i9_section3_drafts WHERE record_id = ?').get(row.recordId))
+      };
+    });
+    return res.json({ records });
+  } catch (error) {
+    console.error('Unable to list I-9 records:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load I-9 records.' });
+  }
+});
+
+app.post('/api/i9/records', requireIssuerSession, async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  const body = req.body || {};
+  const employerId = req.issuerContext.employer.id;
+  let hireDate;
+  let authorizationExpiration = null;
+  try {
+    hireDate = parseDmyy(body.hireDate);
+    if (body.authorizationExpiration) authorizationExpiration = parseDmyy(body.authorizationExpiration);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+  if (authorizationExpiration && authorizationExpiration < hireDate) {
+    return res.status(400).json({ success: false, message: 'Work authorization expiration cannot be earlier than the hire date.' });
+  }
+  const employeeName = normalizeLetterText(body.employeeName, 160);
+  const workState = normalizeLetterText(body.workState, 2).toUpperCase();
+  const employeeCount = body.employeeCount;
+  const stateLawReviewConfirmed = body.stateLawReviewConfirmed === true;
+  let stateRules;
+  try {
+    stateRules = evaluateStateRules({
+      workState,
+      employeeCount,
+      offerAccepted: body.offerAccepted === true,
+      eVerifyRequested: body.eVerifyRequested === true,
+      eVerifyEnrolled: body.eVerifyEnrolled === true,
+      stateLawReviewConfirmed
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+  if (!stateRules.allowed) return res.status(400).json({ success: false, message: stateRules.errors.join(' ') });
+  if (!employeeName || body.postersDisplayed !== true) {
+    return res.status(400).json({ success: false, message: 'Display both federal posters and provide the employee name before collecting the record.' });
+  }
+  try {
+    validateDocumentChoice({
+      listChoice: body.listChoice,
+      listAName: normalizeLetterText(body.listAName, 120),
+      listBName: normalizeLetterText(body.listBName, 120),
+      listCName: normalizeLetterText(body.listCName, 120),
+      employeeSelectedDocuments: body.employeeSelectedDocuments === true
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+  const remoteProcedure = body.remoteProcedure === true;
+  const files = body.authorizationDocuments;
+  if (files !== undefined && !Array.isArray(files)) {
+    return res.status(400).json({ success: false, message: 'Authorization documents must be uploaded as a list.' });
+  }
+  if (remoteProcedure && (body.eVerifyEnrolled !== true || body.dhsProcedureEligible !== true || body.liveVideoConfirmed !== true || !files?.length)) {
+    return res.status(400).json({ success: false, message: 'The DHS alternative procedure requires E-Verify participation in good standing, retained document copies, a live video examination, and uploaded document copies.' });
+  }
+  if (body.liveVideoConfirmed === true && remoteProcedure !== true) {
+    return res.status(400).json({ success: false, message: 'Confirm the DHS alternative procedure checkbox when recording a remote live-video examination.' });
+  }
+  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg'];
+  const attachments = [];
+  let attachmentBytes = 0;
+  try {
+    for (const file of files || []) {
+      const attachment = decodeUploadedFile(file, allowedTypes, 4000000, 'Authorization document');
+      attachmentBytes += Buffer.byteLength(attachment.contents, 'base64');
+      if (attachments.length >= 10 || attachmentBytes > 4000000) throw new Error('Upload no more than 10 documents with a combined size below 4 MB.');
+      attachments.push(attachment);
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+  const recordId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const formData = {
+    employeeName,
+    workState,
+    employeeCount,
+    hireDate,
+    offerAccepted: body.offerAccepted === true,
+    eVerifyEnrolled: body.eVerifyEnrolled === true,
+    eVerifyRequested: body.eVerifyRequested === true,
+    stateLawReviewConfirmed,
+    stateRules,
+    remoteProcedure,
+    dhsProcedureEligible: body.dhsProcedureEligible === true,
+    liveVideoConfirmed: body.liveVideoConfirmed === true,
+    postersDisplayed: true,
+    listChoice: body.listChoice,
+    listAName: normalizeLetterText(body.listAName, 120),
+    listBName: normalizeLetterText(body.listBName, 120),
+    listCName: normalizeLetterText(body.listCName, 120),
+    employeeSelectedDocuments: true,
+    authorizationExpiration,
+    attachmentNames: attachments.map(({ name, mediaType }) => ({ name, mediaType }))
+  };
+  let formEnvelope;
+  try {
+    formEnvelope = JSON.stringify(issuerAuth.encryptRetainedSensitive(JSON.stringify(formData)));
+  } catch (error) {
+    console.error('I-9 encryption is unavailable:', error);
+    return res.status(503).json({ success: false, message: 'Encrypted I-9 storage is unavailable. Configure the employer data encryption key.' });
+  }
+  database.exec('BEGIN IMMEDIATE');
+  try {
+    database.prepare(`INSERT INTO i9_records
+      (record_id, employer_id, encrypted_form_data, work_state, employee_count, hire_date,
+      authorization_expiration, remote_procedure, live_video_confirmed, e_verify_requested, created_at, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`)
+      .run(recordId, employerId, formEnvelope, workState, employeeCount, hireDate, authorizationExpiration,
+        remoteProcedure ? 1 : 0, body.liveVideoConfirmed === true ? 1 : 0, body.eVerifyRequested === true ? 1 : 0, createdAt);
+    for (const attachment of attachments) {
+      database.prepare(`INSERT INTO i9_attachments
+        (attachment_id, record_id, filename, media_type, encrypted_contents) VALUES (?, ?, ?, ?, ?)`)
+        .run(crypto.randomUUID(), recordId, attachment.name, attachment.mediaType,
+          JSON.stringify(issuerAuth.encryptRetainedSensitive(attachment.contents)));
+    }
+    appendI9AuditEvent(recordId, employerId, req.issuerContext.officer.id, 'record_created', {
+      workState,
+      remoteProcedure,
+      liveVideoConfirmed: body.liveVideoConfirmed === true,
+      eVerifyRequested: body.eVerifyRequested === true,
+      attachmentCount: attachments.length
+    });
+    if (authorizationExpiration) {
+      const expirationTime = Date.parse(`${authorizationExpiration}T00:00:00.000Z`);
+      const daysRemaining = Math.ceil((expirationTime - Date.now()) / 86400000);
+        const thresholds = getReverificationThresholds(daysRemaining);
+      for (const thresholdDays of thresholds) {
+        const scheduledTime = expirationTime - thresholdDays * 86400000;
+        const dueAt = new Date(Math.max(scheduledTime, Date.now())).toISOString();
+        database.prepare(`INSERT INTO i9_reverification_alerts
+          (alert_id, record_id, employer_id, threshold_days, due_at, sent_at) VALUES (?, ?, ?, ?, ?, NULL)`)
+          .run(crypto.randomUUID(), recordId, employerId, thresholdDays, dueAt);
+      }
+    }
+    database.exec('COMMIT');
+  } catch (error) {
+    database.exec('ROLLBACK');
+    console.error('Unable to save encrypted I-9 record:', error);
+    return res.status(503).json({ success: false, message: 'Unable to securely save this I-9 evidence record.' });
+  }
+  processI9ExpirationAlerts().catch((error) => console.error('I-9 expiration processing failed:', error));
+  return res.status(201).json({
+    success: true,
+    recordId,
+    outputNotice: 'Use the downloadable worksheet as an evidence aid; complete the official USCIS Form I-9 separately.'
+  });
+});
+
+app.get('/api/i9/records/:recordId/export', requireIssuerSession, (req, res) => {
+  try {
+    const record = getI9Record(req.params.recordId, req.issuerContext.employer.id);
+    if (!record) return res.status(404).json({ success: false, message: 'I-9 record not found.' });
+    appendI9AuditEvent(record.recordId, record.employerId, req.issuerContext.officer.id, 'worksheet_exported');
+    const data = record.formData;
+    const lines = [
+      'DRAFT I-9 EMPLOYMENT ELIGIBILITY VERIFICATION WORKSHEET',
+      'NOT AN OFFICIAL USCIS FORM. Transfer information to the current Form I-9.',
+      `Employee: ${data.employeeName}`,
+      `First day of employment: ${data.hireDate}`,
+      `Work location: ${data.workState}`,
+      `Form I-9 document grouping chosen by employee: ${data.listChoice === 'A' ? 'List A' : 'List B plus List C'}`,
+      `List A title: ${data.listAName || 'N/A'}`,
+      `List B title: ${data.listBName || 'N/A'}`,
+      `List C title: ${data.listCName || 'N/A'}`,
+      `DHS Alternative Procedure checkbox on official Form I-9: ${data.remoteProcedure ? '[X]' : '[ ]'}`,
+      `Remote examination procedure selected: ${data.remoteProcedure ? 'YES' : 'NO'}`,
+      `Live video examination confirmed: ${data.liveVideoConfirmed ? 'YES' : 'NO'}`,
+      `Supporting copies stored: ${data.attachmentNames.length}`,
+      `Work authorization expiration: ${record.authorizationExpiration || 'N/A'}`,
+      `E-Verify case requested: ${data.eVerifyRequested ? 'YES' : 'NO'}`,
+      `Record ID: ${record.recordId}`,
+      `Recorded: ${record.createdAt}`
+    ].join('\n');
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="i9-worksheet-${record.recordId}.pdf"`);
+    return res.send(createPdfBuffer(lines));
+  } catch (error) {
+    console.error('Unable to export I-9 worksheet:', error);
+    return res.status(500).json({ success: false, message: 'Unable to export this I-9 worksheet.' });
+  }
+});
+
+app.get('/api/i9/records/:recordId/section3', requireIssuerSession, (req, res) => {
+  try {
+    const row = database.prepare(`SELECT encrypted_draft AS encryptedDraft FROM i9_section3_drafts
+      WHERE record_id = ? AND employer_id = ?`).get(req.params.recordId, req.issuerContext.employer.id);
+    if (!row) return res.status(404).json({ success: false, message: 'The automatic Section 3 worksheet is generated at the 90-day notice point.' });
+    const draft = JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(row.encryptedDraft)));
+    appendI9AuditEvent(req.params.recordId, req.issuerContext.employer.id, req.issuerContext.officer.id, 'section3_draft_exported');
+    const lines = [draft.title, draft.notice, `Employee: ${draft.employeeName}`, `Work location: ${draft.workState}`,
+      `First day of employment: ${draft.hireDate}`, `Authorization expiration: ${draft.authorizationExpiration}`,
+      draft.employerAction, `Draft generated: ${draft.generatedAt}`].join('\n');
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="supplement-b-draft-${req.params.recordId}.pdf"`);
+    return res.send(createPdfBuffer(lines));
+  } catch (error) {
+    console.error('Unable to export Supplement B worksheet:', error);
+    return res.status(500).json({ success: false, message: 'Unable to export the Supplement B worksheet.' });
+  }
+});
+
+app.get('/api/i9/audit-export', requireIssuerSession, (req, res) => {
+  const employerId = req.issuerContext.employer.id;
+  try {
+    appendI9AuditEvent('archive', employerId, req.issuerContext.officer.id, 'audit_archive_exported');
+    const recordRows = database.prepare(`SELECT record_id AS recordId, encrypted_form_data AS encryptedFormData,
+      work_state AS workState, hire_date AS hireDate, authorization_expiration AS authorizationExpiration,
+      remote_procedure AS remoteProcedure, live_video_confirmed AS liveVideoConfirmed, e_verify_requested AS eVerifyRequested,
+      created_at AS createdAt, status FROM i9_records WHERE employer_id = ? ORDER BY created_at`).all(employerId);
+    const records = recordRows.map((row) => ({
+      ...row,
+      remoteProcedure: Boolean(row.remoteProcedure),
+      liveVideoConfirmed: Boolean(row.liveVideoConfirmed),
+      eVerifyRequested: Boolean(row.eVerifyRequested),
+      form: JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(row.encryptedFormData)))
+    }));
+    records.forEach((record) => { delete record.encryptedFormData; });
+    const i9Events = database.prepare(`SELECT record_id AS recordId, actor_id AS actorId, event_type AS eventType,
+      details_json AS details, recorded_at AS recordedAt FROM i9_audit_events WHERE employer_id = ? ORDER BY event_sequence`).all(employerId);
+    const paymentEvents = database.prepare(`SELECT payment_id AS paymentId, event_type AS eventType, source,
+      provider_event_id AS providerEventId, payload_json AS payload, occurred_at AS occurredAt,
+      recorded_at AS recordedAt FROM payment_events WHERE owner_id = ? ORDER BY event_sequence`).all(employerId);
+    const reverificationAlerts = database.prepare(`SELECT alert_id AS alertId, record_id AS recordId,
+      threshold_days AS thresholdDays, due_at AS dueAt, sent_at AS sentAt FROM i9_reverification_alerts
+      WHERE employer_id = ? ORDER BY due_at, threshold_days DESC`).all(employerId);
+    const section3Drafts = database.prepare(`SELECT record_id AS recordId, encrypted_draft AS encryptedDraft,
+      created_at AS createdAt FROM i9_section3_drafts WHERE employer_id = ? ORDER BY created_at`).all(employerId)
+      .map((draft) => ({
+        recordId: draft.recordId,
+        draft: JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(draft.encryptedDraft))),
+        createdAt: draft.createdAt
+      }));
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (error) => {
+      console.error('I-9 audit ZIP failed:', error);
+      res.destroy(error);
+    });
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="ice-audit-${employerId}-${new Date().toISOString().slice(0, 10)}.zip"`);
+    archive.pipe(res);
+    archive.append(JSON.stringify({ exportedAt: new Date().toISOString(), records }, null, 2), { name: 'i9-records.json' });
+    archive.append(JSON.stringify(i9Events.map((event) => ({ ...event, details: JSON.parse(event.details) })), null, 2), { name: 'i9-audit-events.json' });
+    archive.append(JSON.stringify(paymentEvents.map((event) => ({ ...event, payload: JSON.parse(event.payload) })), null, 2), { name: 'payment-events.json' });
+    archive.append(JSON.stringify({ alerts: reverificationAlerts, section3Drafts }, null, 2), { name: 'reverification.json' });
+    for (const record of recordRows) {
+      const attachments = database.prepare(`SELECT filename AS filename, media_type AS mediaType, encrypted_contents AS encryptedContents
+        FROM i9_attachments WHERE record_id = ?`).all(record.recordId);
+      for (const file of attachments) {
+        const contents = issuerAuth.decryptRetainedSensitive(JSON.parse(file.encryptedContents));
+        const safeName = file.filename.replace(/[\\/]/g, '_');
+        archive.append(Buffer.from(contents, 'base64'), { name: `authorization-documents/${record.recordId}/${safeName}` });
+      }
+    }
+    archive.append('Contains confidential employee data. Handle and retain in accordance with applicable Form I-9 and privacy requirements.\n', { name: 'READ-ME.txt' });
+    return archive.finalize();
+  } catch (error) {
+    console.error('Unable to create I-9 audit archive:', error);
+    if (res.headersSent) return res.destroy(error);
+    return res.status(500).json({ success: false, message: 'Unable to create the audit archive.' });
+  }
+});
+
+app.post('/api/payments', requireIssuerSession, (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  const amountMinor = req.body?.amountMinor;
+  const currency = typeof req.body?.currency === 'string' ? req.body.currency.toUpperCase() : '';
+  const reference = normalizeLetterText(req.body?.reference, 100);
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > 100000000 || !/^[A-Z]{3}$/.test(currency)) {
+    return res.status(400).json({ success: false, message: 'Provide a positive amount in minor currency units and a three-letter currency code.' });
+  }
+  try {
+    const result = paymentLedger.initiate(req.get('idempotency-key'), {
+      amountMinor,
+      currency,
+      reference,
+      ownerId: req.issuerContext.employer.id
+    });
+    return res.status(result.replayed ? 200 : 201).json({ success: true, ...result });
+  } catch (error) {
+    const status = /already used with a different request/.test(error.message) ? 409 : 400;
+    return res.status(status).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/payments/:paymentId', requireIssuerSession, (req, res) => {
+  const payment = paymentLedger.getPayment(req.params.paymentId, req.issuerContext.employer.id);
+  if (!payment) return res.status(404).json({ success: false, message: 'Payment was not found.' });
+  return res.json({ success: true, ...payment });
+});
+
+function renderStateLandingPage(stateName, stateTitle) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="${stateTitle} for employers, recruiters, and verification teams in ${stateName}." />
+    <title>${stateTitle}</title>
+    <link rel="stylesheet" href="/public/brand.css" />
+    <style>
+      :root { --ink:#1f2937; --green:#176b55; --line:#dfe5e7; --paper:#fff; --canvas:#f3f6f5; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--canvas); color:var(--ink); font: 16px Arial, sans-serif; }
+      main { width:min(760px, calc(100% - 32px)); margin: 64px auto 80px; }
+      .card { padding: 32px; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(15,23,42,.08); }
+      h1 { margin: 0 0 14px; font-size: clamp(2.1rem, 4vw, 3.2rem); line-height: 1.1; }
+      p { color: #4b5d67; line-height: 1.7; }
+      .meta { margin-top: 18px; color: var(--green); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
+      a.button { display:inline-block; margin-top:18px; padding: 12px 18px; background: var(--green); color: #fff; text-decoration:none; border-radius: 4px; font-weight:700; }
+      footer { width:min(760px, calc(100% - 32px)); margin: 0 auto 32px; color:#41515b; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <div class="meta">US-EVS • ${stateName}</div>
+        <h1>${stateTitle}</h1>
+        <p>Generate compliant, traceable employment verification letters for ${stateName} employers, background screening teams, and verification requestors. Built for fast document preparation, reference lookup, and audit-ready employment histories.</p>
+        <p>Use the US-EVS builder to prepare a standardized verification record that can be shared with third parties, lenders, property managers, and HR teams while keeping a verifiable record in the platform.</p>
+        <a class="button" href="/">Create a verification letter</a>
+      </div>
+    </main>
+    <footer>us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.</footer>
+  </body>
+</html>`;
+}
+
+app.get('/texas', (req, res) => res.type('html').send(renderStateLandingPage('Texas', 'Texas Standardized Employment Verification Letter Generator')));
+app.get('/california', (req, res) => res.type('html').send(renderStateLandingPage('California', 'California Standardized Employment Verification Letter Generator')));
+app.get('/florida', (req, res) => res.type('html').send(renderStateLandingPage('Florida', 'Florida Standardized Employment Verification Letter Generator')));
+app.get('/new-york', (req, res) => res.type('html').send(renderStateLandingPage('New York', 'New York Standardized Employment Verification Letter Generator')));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
@@ -582,10 +1114,13 @@ app.use('/api/review', (req, res, next) => {
 app.use('/public', express.static(path.join(__dirname, 'public'), { dotfiles: 'deny' }));
 app.get('/issuer.js', (req, res) => res.sendFile(path.join(__dirname, 'issuer.js')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js')));
+app.get('/payment-client.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-client.js')));
 app.get('/letter-pdf.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-pdf.js')));
 app.get('/letter-template.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-template.js')));
 app.get('/BingSiteAuth.xml', (req, res) => res.sendFile(path.join(__dirname, 'BingSiteAuth.xml')));
 app.get('/googlefc80fd584f1dfdf2.html', (req, res) => res.sendFile(path.join(__dirname, 'googlefc80fd584f1dfdf2.html')));
+app.get('/robots.txt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'robots.txt')));
+app.get('/llms.txt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'llms.txt')));
 
 app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
@@ -698,6 +1233,9 @@ app.post('/send-email', async (req, res) => {
   if (!entry) {
     return res.status(404).json({ success: false, message: 'Reference not found' });
   }
+  if (!/^[A-Z]{2,5}$/.test(entry.digitalInitials || '')) {
+    return res.status(403).json({ success: false, message: 'This record has no page initials and cannot be delivered as a PDF.' });
+  }
   if (!emailTransport) {
     return res.status(503).json({ success: false, message: 'Email delivery is not configured' });
   }
@@ -707,10 +1245,10 @@ app.post('/send-email', async (req, res) => {
       from: emailFrom,
       to: recipient,
       subject: 'Employment Verification Letter',
-      text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}`,
+      text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}${issuerAuth.getEmailFooter()}`,
       attachments: [{
         filename: 'employment_verification_letter.pdf',
-        content: createPdfBuffer(entry.letter),
+        content: createPdfBuffer(entry.letter, undefined, entry.digitalInitials),
         contentType: 'application/pdf'
       }]
     });
@@ -924,6 +1462,9 @@ app.get('/api/letters/:referenceNumber/export', requireIssuerSession, async (req
   try {
     const found = recordForIssuer(req.params.referenceNumber, req.issuerContext.employer.id);
     if (!found) return res.status(404).json({ success: false, message: 'Verification record was not found or has expired.' });
+    if (format === 'pdf' && !found.record.digitalInitials) {
+      return res.status(403).json({ success: false, message: 'This record has no page initials and cannot be exported as a PDF.' });
+    }
     const qrContent = buildVerificationUrl(req, req.params.referenceNumber, found.auditEntry.timestamp, found.auditEntry.signerTag);
     const qr = QRCode.create(qrContent, { errorCorrectionLevel: 'M' });
     const qrMatrix = { size: qr.modules.size, data: qr.modules.data };
@@ -932,7 +1473,7 @@ app.get('/api/letters/:referenceNumber/export', requireIssuerSession, async (req
     if (format === 'pdf') {
       res.type('application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="employment-verification-${req.params.referenceNumber}.pdf"`);
-      return res.send(createPdfBuffer(found.record.letter, qrMatrix));
+      return res.send(createPdfBuffer(found.record.letter, qrMatrix, found.record.digitalInitials));
     }
     const wordDocument = await createWordDocument({ ...found.record, referenceNumber: req.params.referenceNumber }, qrBuffer);
     res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -953,12 +1494,13 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, async (req
   try {
     const found = recordForIssuer(req.params.referenceNumber, req.issuerContext.employer.id);
     if (!found) return res.status(404).json({ success: false, message: 'Verification record was not found or has expired.' });
+    if (!found.record.digitalInitials) return res.status(403).json({ success: false, message: 'This record has no page initials and cannot be emailed as a PDF.' });
     const qrContent = buildVerificationUrl(req, req.params.referenceNumber, found.auditEntry.timestamp, found.auditEntry.signerTag);
     const qr = QRCode.create(qrContent, { errorCorrectionLevel: 'M' });
     const qrMatrix = { size: qr.modules.size, data: qr.modules.data };
     const attachments = [{
       filename: `employment-verification-${req.params.referenceNumber}.pdf`,
-      content: createPdfBuffer(found.record.letter, qrMatrix),
+      content: createPdfBuffer(found.record.letter, qrMatrix, found.record.digitalInitials),
       contentType: 'application/pdf'
     }, ...(found.record.attachments || []).map((file) => ({
       filename: file.name,
@@ -970,7 +1512,7 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, async (req
       to: recipientEmail,
       cc: req.issuerContext.employer.businessEmail,
       subject: `Employment Verification · ${req.params.referenceNumber}`,
-      text: `Please find the employment verification letter and requested attachments.\n\nDocument ID: ${req.params.referenceNumber}\n`,
+      text: `Please find the employment verification letter and requested attachments.\n\nDocument ID: ${req.params.referenceNumber}\n${issuerAuth.getEmailFooter()}`,
       attachments
     });
     return res.json({ success: true, message: `Verification letter sent to ${recipientEmail}.` });
@@ -1058,16 +1600,24 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
+  const digitalInitials = normalizeLetterText(body.digitalInitials, 5).toUpperCase();
+  if (!/^[A-Z]{2,5}$/.test(digitalInitials)) {
+    return res.status(400).json({ success: false, message: 'Enter 2 to 5 letters as your digital initials. They will appear on every PDF page.' });
+  }
+  const hasUploadedContent = attachments.length > 0 || Boolean(logo) || (body.signatureMode === 'upload' && Boolean(signature));
+  if (hasUploadedContent && body.contentLiabilityAccepted !== true) {
+    return res.status(400).json({ success: false, message: 'Accept the uploaded-content responsibility terms before uploading documents.' });
+  }
   const redactSsn = body.redactSsn === true;
   const redactCompensation = body.redactCompensation === true;
   const money = (field, label) => redactCompensation
     ? '[REDACTED]'
-    : normalizeLetterText(field, 60) || `not provided (${label})`;
+    : normalizeLetterText(field, 60) || 'N/A';
   const avgHoursValue = normalizeLetterText(body.averageHours, 6);
   const avgHours = avgHoursValue && Number.isFinite(Number(avgHoursValue)) && Number(avgHoursValue) >= 0 && Number(avgHoursValue) <= 168
     ? avgHoursValue
-    : 'not provided';
-  const ssnLine = ssnLast4 ? `SSN: ${redactSsn ? '[REDACTED]' : `XXX-XX-${ssnLast4}`}` : '';
+    : 'N/A';
+  const ssnLine = ssnLast4 ? `SSN: ${redactSsn ? '[REDACTED]' : `XXX-XX-${ssnLast4}`}` : 'SSN: N/A';
   const generatedAt = new Date();
   const timestamp = generatedAt.toISOString();
   let referenceNumber;
@@ -1125,9 +1675,9 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
     employer.legalName.toUpperCase(),
     employer.businessAddress,
     `${employer.businessPhone} · ${employer.businessEmail}`,
-    normalizeLetterText(body.ein, 10) ? `EIN: ${normalizeLetterText(body.ein, 10)}` : '',
-    normalizeLetterText(body.recipientName, 160) ? `Prepared for: ${normalizeLetterText(body.recipientName, 160)}` : '',
-    normalizeLetterText(body.recipientAddress, 240),
+    `EIN: ${normalizeLetterText(body.ein, 10) || 'N/A'}`,
+    `Prepared for: ${normalizeLetterText(body.recipientName, 160) || 'N/A'}`,
+    normalizeLetterText(body.recipientAddress, 240) || 'N/A',
     '',
     'EMPLOYMENT VERIFICATION LETTER',
     `Document ID: ${referenceNumber}`,
@@ -1161,6 +1711,7 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
   try {
     const documentData = {
       letter,
+      digitalInitials,
       employeeName: employee,
       jobTitle: position,
       purpose,
@@ -1261,6 +1812,7 @@ app.use((error, req, res, next) => {
 async function startServer() {
   await fs.mkdir(dataDirectory, { recursive: true });
   initializeDocumentDatabase();
+  paymentLedger = createPaymentLedger(database);
   await Promise.all([
     ensureJsonArrayFile(historyPath),
     ensureJsonArrayFile(secureLettersPath),
@@ -1271,10 +1823,15 @@ async function startServer() {
   await migrateLegacyLetterHistory();
   await migrateSecureLettersToDatabase();
   await purgeExpiredEmployeeData();
+  await processI9ExpirationAlerts();
   const retentionInterval = setInterval(() => {
     purgeExpiredEmployeeData().catch((error) => console.error('Sensitive-data retention purge failed:', error));
   }, 60 * 60 * 1000);
   retentionInterval.unref();
+  const i9ExpirationInterval = setInterval(() => {
+    processI9ExpirationAlerts().catch((error) => console.error('I-9 expiration processing failed:', error));
+  }, 60 * 60 * 1000);
+  i9ExpirationInterval.unref();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);

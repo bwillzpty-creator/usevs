@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/public/fonts/source-sans-3-latin-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/public/fonts/source-serif-4-latin-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 :root {
   --brand-navy: #0a192f;
   --brand-slate: #1e293b;
@@ -22,7 +38,7 @@ html {
 body {
   background-color: var(--brand-navy) !important;
   color: var(--brand-ink);
-  font-family: Arial, sans-serif;
+  font-family: "Source Sans 3", Arial, sans-serif !important;
 }
 
 button,

@@ -80,12 +80,13 @@ function parseBusinessDocument(value) {
 }
 
 class IssuerAuth {
-  constructor({ storePath, encryptionKey, emailTransport, emailFrom, publicBaseUrl, reviewToken }) {
+  constructor({ storePath, encryptionKey, emailTransport, emailFrom, publicBaseUrl, reviewToken, businessPostalAddress }) {
     this.storePath = storePath;
     this.encryptionKey = readEncryptionKey(encryptionKey);
     this.emailTransport = emailTransport;
     this.emailFrom = emailFrom;
     this.publicBaseUrl = typeof publicBaseUrl === 'string' ? publicBaseUrl.replace(/\/+$/, '') : '';
+    this.businessPostalAddress = typeof businessPostalAddress === 'string' ? businessPostalAddress.trim() : '';
     this.reviewToken = typeof reviewToken === 'string' && reviewToken.length >= 32 ? reviewToken : '';
     this.challenges = new Map();
     this.sessions = new Map();
@@ -103,6 +104,11 @@ class IssuerAuth {
         if (writeError.code !== 'EEXIST') throw writeError;
       });
     }
+  }
+
+  getEmailFooter() {
+    if (!this.businessPostalAddress) throw new Error('BUSINESS_POSTAL_ADDRESS must be configured for compliant email delivery.');
+    return `\n\nEmployment Verification USA · US-EVS\nPhysical mailing address: ${this.businessPostalAddress}\nUnsubscribe: mailto:support@us-evs.com?subject=Unsubscribe`;
   }
 
   async ensureReviewAccount(password) {
@@ -241,6 +247,8 @@ class IssuerAuth {
       !officerName || officerName.length > 160 || !officerTitle || officerTitle.length > 120) {
       throw new Error('Provide the legal business name, address, phone, and matching corporate emails for the business and HR signatory.');
     }
+    if (input.ageConfirmed !== true) throw new Error('Confirm that you are at least 18 years old to register.');
+    if (input.businessDocument && input.contentLiabilityAccepted !== true) throw new Error('Accept the uploaded-content responsibility terms to register.');
 
     const officerPasswordHash = hashPassword(input.officerPassword);
     const businessDocument = parseBusinessDocument(input.businessDocument);
@@ -284,7 +292,7 @@ class IssuerAuth {
         from: this.emailFrom,
         to: businessEmail,
         subject: 'Confirm your employer account',
-        text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.`
+        text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.${this.getEmailFooter()}`
       });
     } catch (error) {
       await this.updateStore((store) => {
@@ -400,7 +408,7 @@ class IssuerAuth {
       from: this.emailFrom,
       to: officer.email,
       subject: 'Your HR sign-in verification code',
-      text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.`
+      text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.getEmailFooter()}`
     });
     this.challenges.set(challengeId, {
       employerId: employer.id,

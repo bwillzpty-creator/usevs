@@ -26,6 +26,8 @@
       label { display: grid; gap: 6px; font-weight: 700; }
       input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #b8c5c9; border-radius: 3px; background: #fff; color: var(--ink); font: inherit; }
       input[type=file] { padding: 7px; }
+      input[type=checkbox] { width: 20px; min-height: 20px; accent-color: var(--green); }
+      label > span { display: flex; align-items: center; gap: 8px; }
       button { min-height: 44px; padding: 10px 14px; border: 0; border-radius: 3px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
       button:disabled { opacity: .65; cursor: wait; }
       .hint, .status { color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -41,6 +43,7 @@
       @media (max-width: 900px) { header { align-items: flex-start; padding: 15px 0; } header > a:last-child { padding-top: 11px; } main { padding-top: 22px; } .columns { grid-template-columns: 1fr; gap: 18px; } section { padding: 19px; } }
       @media (max-width: 380px) { header, main, footer { width: calc(100% - 24px); } header { gap: 8px; } header > a:last-child { font-size: 13px; } h1 { font-size: 25px; } section { padding: 15px; } }
     </style>
+    <script src="/payment-client.js" defer></script>
     <script src="/issuer.js" defer></script>
   </head>
   <body>
@@ -57,11 +60,11 @@
       <div class="columns">
         <section aria-labelledby="loginHeading">
           <h2 id="loginHeading">Sign in</h2>
-          <form id="loginForm">
+          <form id="loginForm" data-private data-hj-suppress data-fs-exclude>
             <label for="loginEmail">HR corporate email</label>
             <input id="loginEmail" name="email" type="email" autocomplete="username" required />
             <label for="loginPassword">Password</label>
-            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" data-private data-hj-suppress data-fs-exclude required />
             <button type="submit">Email a sign-in code</button>
             <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
           </form>
@@ -74,7 +77,7 @@
         </section>
         <section aria-labelledby="registerHeading">
           <h2 id="registerHeading">Register an employer</h2>
-          <form id="employerForm">
+          <form id="employerForm" data-private data-hj-suppress data-fs-exclude>
             <label for="legalBusinessName">Legal business name</label>
             <input id="legalBusinessName" name="legalBusinessName" autocomplete="organization" required />
             <label for="businessAddress">Business street address</label>
@@ -90,9 +93,12 @@
             <label for="officerEmail">Signatory corporate email</label>
             <input id="officerEmail" name="officerEmail" type="email" autocomplete="email" required />
             <label for="officerPassword">Signatory password (12+ characters)</label>
-            <input id="officerPassword" name="officerPassword" type="password" minlength="12" autocomplete="new-password" required />
+            <input id="officerPassword" name="officerPassword" type="password" minlength="12" autocomplete="new-password" data-private data-hj-suppress data-fs-exclude required />
             <label for="businessDocument">Optional business document (PDF, PNG, or JPEG; max 5 MB)</label>
             <input id="businessDocument" name="businessDocument" type="file" accept="application/pdf,image/png,image/jpeg" />
+            <p class="hint">Only upload material you own or are authorized to share. You are responsible for ensuring it is lawful, accurate, and does not violate another person's rights.</p>
+            <label><span><input type="checkbox" name="contentLiabilityAccepted" /> I accept responsibility for the content I upload.</span></label>
+            <label><span><input type="checkbox" name="ageConfirmed" required /> I confirm that I am at least 18 years old.</span></label>
             <p class="hint">Business and signatory emails must use the same corporate domain. Consumer email providers are not accepted. Email confirmation and independent business review are required before letters can be issued.</p>
             <button type="submit">Create employer account</button>
             <p id="registrationStatus" class="status" role="status" aria-live="polite"></p>

@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Employment Verification USA, US-EVS (US Employment Verification System): Instant Employment Verification for the United States." />
+    <meta name="description" content="Standardized US Employment Verification System for HR, leasing, lending, and background verification workflows in the United States." />
     <meta name="application-name" content="Employment Verification USA" />
     <link rel="canonical" href="https://www.us-evs.com/" />
-    <title>Employment Verification USA | US-EVS (US Employment Verification System)</title>
+    <title>Standardized US Employment Verification System</title>
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"US-EVS","alternateName":"Standardized US Employment Verification System","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://www.us-evs.com/","description":"A commercial employment verification platform for authorized U.S. employers, recruiters, and compliance teams.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+    </script>
     <link rel="stylesheet" href="/public/brand.css" />
     <script src="/script.js" defer></script>
     <style>
@@ -27,7 +30,7 @@
         margin: 0;
         background: var(--canvas);
         color: var(--ink);
-        font-family: Arial, sans-serif;
+        font-family: "Source Sans 3", Arial, sans-serif;
       }
       a {
         color: inherit;
@@ -118,7 +121,7 @@
       h1 {
         max-width: 620px;
         margin: 20px 0 18px;
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Source Serif 4", Georgia, serif;
         font-size: 64px;
         font-weight: 400;
         line-height: 1.02;
@@ -220,7 +223,7 @@
       }
       .letter-preview h2 {
         margin: 0;
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Source Serif 4", Georgia, serif;
         font-size: 15px;
       }
       .letter-preview-meta {
@@ -290,7 +293,7 @@
       .section-title {
         max-width: 620px;
         margin: 0;
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Source Serif 4", Georgia, serif;
         font-size: 36px;
         font-weight: 400;
         line-height: 1.15;
@@ -302,66 +305,345 @@
         font-size: 15px;
         line-height: 1.7;
       }
-      .how-grid {
+      .workspace-card {
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.22);
+      }
+      .workspace-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+        color: #dfe9e5;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .mini-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .workspace-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 24px;
-        margin-top: 30px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+        gap: 16px;
       }
-      .how-step {
-        padding: 16px 24px 20px;
-        border-top: 2px solid var(--line);
+      .workspace-form,
+      .workspace-preview {
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
       }
-      .how-step strong {
-        display: block;
-        margin-bottom: 10px;
-        color: var(--rust);
-        font-size: 12px;
-      }
-      .how-step h3 {
-        margin: 0 0 8px;
-        font-size: 15px;
-      }
-      .how-step p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.65;
-      }
-      .trust-section {
-        background: #e8efec;
-      }
-      .trust-grid {
+      .workspace-form {
         display: grid;
-        grid-template-columns: 0.9fr 1.1fr;
-        gap: 56px;
-        align-items: start;
+        gap: 12px;
       }
-      .trust-list {
+      .input-group {
         display: grid;
-        gap: 0;
+        gap: 8px;
       }
-      .trust-item {
-        padding: 16px 24px;
-        border-top: 1px solid #cad8d2;
+      .input-group label {
+        color: #dfe9e5;
+        font-size: 11px;
+        font-weight: 700;
       }
-      .trust-item strong {
-        display: block;
-        margin-bottom: 5px;
+      .input-group input {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.08);
+        color: #fff;
         font-size: 14px;
       }
-      .trust-item p {
-        margin: 0;
-        color: #586a63;
+      .workspace-form .button {
+        width: 100%;
+        margin-top: 8px;
+      }
+      .workspace-preview {
+        position: relative;
+        overflow: hidden;
+        min-height: 370px;
+        background: #f5f7f6;
+      }
+      .preview-watermark {
+        position: absolute;
+        right: 18px;
+        bottom: 18px;
+        transform: rotate(-18deg);
+        color: rgba(23, 107, 85, 0.12);
+        font-size: 40px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+      .preview-document {
+        position: relative;
+        z-index: 1;
+        min-height: 100%;
+        padding: 18px 18px 12px;
+        background: #fff;
+        color: var(--ink);
+        box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.08);
+      }
+      .preview-document-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .preview-document-head small {
+        color: var(--green);
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .preview-document h3 {
+        margin: 18px 0 12px;
+        color: var(--green);
         font-size: 13px;
+        text-transform: uppercase;
+      }
+      .preview-document p {
+        margin: 0 0 6px;
+        font-size: 12px;
         line-height: 1.6;
+      }
+      .preview-seal {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 5px 8px;
+        border: 1px solid rgba(200, 117, 77, 0.5);
+        background: rgba(200, 117, 77, 0.12);
+        color: var(--rust);
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+        margin-top: 30px;
+      }
+      .pricing-card {
+        display: flex;
+        flex-direction: column;
+        padding: 22px 20px 18px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+      }
+      .pricing-card.featured {
+        border-color: rgba(23, 107, 85, 0.5);
+        box-shadow: 0 18px 38px rgba(25, 63, 61, 0.08);
+      }
+      .pricing-card h3 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 19px;
+      }
+      .price {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0 0 16px;
+      }
+      .price strong {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 34px;
+        font-weight: 700;
+        color: var(--green);
+      }
+      .price span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .pricing-card ul {
+        display: grid;
+        gap: 10px;
+        margin: 0 0 18px;
+        padding: 0 0 0 18px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .pricing-card .button {
+        margin-top: auto;
+      }
+      .payment-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 30, 32, 0.74);
+        padding: 24px;
+      }
+      .payment-modal.open {
+        display: flex;
+      }
+      .payment-modal-panel {
+        width: min(760px, 100%);
+        max-height: min(82vh, 780px);
+        overflow: auto;
+        padding: 28px 24px 20px;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.22);
+        color: var(--ink);
+      }
+      .payment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .payment-header h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 28px;
+      }
+      .close-modal {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: #fff;
+        color: var(--ink);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .payment-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: 22px;
+      }
+      .payment-methods {
+        display: grid;
+        gap: 12px;
+      }
+      .payment-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 52px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+      }
+      .payment-option strong {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #edf5f2;
+        color: var(--green);
+      }
+      .checkout-summary {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #f3f6f5;
+      }
+      .checkout-summary h4 {
+        margin: 0 0 12px;
+        color: var(--ink);
+        font-size: 15px;
+      }
+      .summary-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .summary-row strong {
+        color: var(--ink);
+      }
+      .checkout-embed {
+        width: 100%;
+        min-height: 160px;
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: linear-gradient(180deg, #f6fbf9 0%, #eef5f2 100%);
+      }
+      .checkout-status {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .signup-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 85;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 30, 32, 0.72);
+        padding: 24px;
+      }
+      .signup-modal.open {
+        display: flex;
+      }
+      .signup-panel {
+        width: min(520px, 100%);
+        padding: 24px;
+        border-radius: 14px;
+        background: #fff;
+        color: var(--ink);
+        box-shadow: 0 30px 52px rgba(0, 0, 0, 0.2);
+      }
+      .signup-panel h3 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 24px;
+      }
+      .signup-panel form {
+        display: grid;
+        gap: 12px;
+      }
+      .signup-panel input {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+      }
+      .signup-panel .button {
+        width: 100%;
       }
       .footer {
         padding: 28px 0;
         background: var(--deep);
         color: #e5eeea;
-      }
-      .footer-inner {
+      }      .footer-inner {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -405,6 +687,20 @@
         color: #c5d9d1;
         font-size: 11px;
         line-height: 1.6;
+      }
+      .faq-item {
+        padding: 18px 0;
+        border-top: 1px solid var(--line);
+      }
+      .faq-item h3 {
+        margin: 0 0 7px;
+        font-size: 16px;
+      }
+      .faq-item p {
+        max-width: 780px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
       }
       @media (max-width: 850px) {
         .hero-inner {
@@ -536,11 +832,11 @@
         <div class="shell hero-inner">
           <div>
             <p class="eyebrow">US-EVS · US EMPLOYMENT VERIFICATION SYSTEM</p>
-            <h1>Official US Employment Verification System</h1>
+            <h1>Standardized US Employment Verification System</h1>
             <p class="hero-copy">Standardized verification letters for HR, residential leasing, commercial lending, immigration, and background checks.</p>
             <p class="hero-detail">US-EVS creates traceable employment records for corporate HR, lenders, property managers, government agencies, and former employee requests.</p>
             <div class="hero-actions">
-              <a class="button button-light" href="/auth">Create a letter</a>
+              <a class="button button-light" href="#workspace">Create a letter</a>
               <a class="button button-outline" href="/lookup">Verify Document ID</a>
               <a class="button button-outline" href="/dashboard">View Record History</a>
             </div>
@@ -576,6 +872,58 @@
           <div class="trust-point"><b>01</b> Reference number on every letter</div>
           <div class="trust-point"><b>02</b> Public verification by reference</div>
           <div class="trust-point"><b>03</b> Email and PDF delivery</div>
+        </div>
+      </section>
+
+      <section class="content-section" id="workspace">
+        <div class="shell">
+          <p class="section-kicker">WORKSPACE</p>
+          <h2 class="section-title">Build a verification letter in a split-screen workspace.</h2>
+          <div class="workspace-card">
+            <div class="workspace-header"><span>EMPLOYMENT LETTER BUILDER</span><span class="mini-chip">No sign-up required</span></div>
+            <div class="workspace-grid">
+              <div class="workspace-form">
+                <div class="input-group">
+                  <label for="workspaceEmployeeName">Employee Name</label>
+                  <input id="workspaceEmployeeName" type="text" value="Alex Morgan" placeholder="Enter employee name" />
+                </div>
+                <div class="input-group">
+                  <label for="workspaceEmployerName">Employer Name</label>
+                  <input id="workspaceEmployerName" type="text" value="Northstar Group" placeholder="Enter employer name" />
+                </div>
+                <div class="input-group">
+                  <label for="workspacePosition">Position</label>
+                  <input id="workspacePosition" type="text" value="Operations Analyst" placeholder="Enter job title" />
+                </div>
+                <div class="input-group">
+                  <label for="workspaceSalary">Salary</label>
+                  <input id="workspaceSalary" type="text" value="$96,000" placeholder="Enter salary" />
+                </div>
+                <div class="input-group">
+                  <label for="workspaceWorkLocation">Work Location</label>
+                  <input id="workspaceWorkLocation" type="text" value="Austin, Texas" placeholder="Enter work location" />
+                </div>
+                <button class="button button-green" type="button" id="downloadWorkspacePdf">Download Print-Ready PDF</button>
+              </div>
+              <div class="workspace-preview" aria-live="polite">
+                <div class="preview-watermark">US-EVS</div>
+                <article class="preview-document">
+                  <div class="preview-document-head">
+                    <small>US-EVS • US EMPLOYMENT VERIFICATION SYSTEM</small>
+                    <span>EV-2026-0001</span>
+                  </div>
+                  <h3>Employment Verification Letter</h3>
+                  <p><strong>Employee Name:</strong> <span id="previewEmployeeName">Alex Morgan</span></p>
+                  <p><strong>Employer Name:</strong> <span id="previewEmployerName">Northstar Group</span></p>
+                  <p><strong>Position:</strong> <span id="previewPosition">Operations Analyst</span></p>
+                  <p><strong>Salary:</strong> <span id="previewSalary">$96,000</span></p>
+                  <p><strong>Work Location:</strong> <span id="previewWorkLocation">Austin, Texas</span></p>
+                  <p><strong>Issued:</strong> 26 Sep 2026</p>
+                  <span class="preview-seal">SAMPLE DOCUMENT</span>
+                </article>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -629,6 +977,63 @@
           </div>
         </div>
       </section>
+      <section class="content-section" aria-labelledby="us-faq-title">
+        <div class="shell">
+          <p class="section-kicker">US COMPLIANCE</p>
+          <h2 class="section-title" id="us-faq-title">Questions about U.S. verification compliance</h2>
+          <article class="faq-item">
+            <h3>Does US-EVS prepare or submit Form I-9 records?</h3>
+            <p>No. US-EVS provides a secure workplace workflow for employer-side verification records, but the employer must still complete the official USCIS Form I-9 and related onboarding paperwork as required by the applicable federal and state rules.</p>
+          </article>
+          <article class="faq-item">
+            <h3>Can US-EVS automate E-Verify or right-to-work checks?</h3>
+            <p>US-EVS can support employer-side verification workflows, audit logging, and document retention for U.S. hiring checks, but it does not replace the employer's legal responsibility to follow current E-Verify, I-9, and local compliance requirements.</p>
+          </article>
+          <article class="faq-item">
+            <h3>Does a US-EVS reference confirm FCRA compliance or background check rules?</h3>
+            <p>No. A US-EVS reference confirms that a verification record exists in the platform. It does not certify compliance with the Fair Credit Reporting Act, state consumer-protection laws, or any employer's independent screening program.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="shell">
+          <p class="section-kicker">PRICING</p>
+          <h2 class="section-title">Simple public pricing for verification workflows.</h2>
+          <div class="pricing-grid">
+            <article class="pricing-card">
+              <h3>Single Verification</h3>
+              <div class="price"><strong>$4.99</strong><span>one-time</span></div>
+              <ul>
+                <li>One-off employment verification document</li>
+                <li>PDF export for print or email</li>
+                <li>Reference number included</li>
+              </ul>
+              <button class="button button-green pricing-trigger" data-plan="Single Verification" data-price="$4.99" type="button">Select plan</button>
+            </article>
+            <article class="pricing-card featured">
+              <h3>Recruiter Pro</h3>
+              <div class="price"><strong>$24.99</strong><span>per month</span></div>
+              <ul>
+                <li>Unlimited verification access</li>
+                <li>Recruiter and small-team workflows</li>
+                <li>Audit trail for active cases</li>
+              </ul>
+              <button class="button button-rust pricing-trigger" data-plan="Recruiter Pro" data-price="$24.99/month" type="button">Select plan</button>
+            </article>
+            <article class="pricing-card">
+              <h3>Enterprise Vault</h3>
+              <div class="price"><strong>$269.99</strong><span>per year</span></div>
+              <ul>
+                <li>High-volume verification generation</li>
+                <li>Tracking, storage, and audit retention</li>
+                <li>Dedicated compliance controls</li>
+              </ul>
+              <button class="button button-outline pricing-trigger" data-plan="Enterprise Vault" data-price="$269.99/year" type="button">Select plan</button>
+            </article>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
@@ -643,7 +1048,7 @@
           <a href="/dashboard">View Record History</a>
         </nav>
         <div class="footer-legal">
-          <p>US-EVS - US Employment Verification System. All rights reserved.<br />&copy; 2026 Employment Verification USA &middot; US-EVS Systems<br />Email: support@us-evs.com</p>
+          <p>US-EVS - US Employment Verification System. All rights reserved.<br />&copy; 2026 Employment Verification USA &middot; US-EVS Systems<br />Email: support@us-evs.com<br />us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.</p>
           <nav class="footer-links" aria-label="Legal and support links">
             <a href="/public/terms-and-conditions.html">Terms and Conditions</a>
             <a href="/public/privacy-policy.html">Privacy Policy</a>
@@ -654,5 +1059,127 @@
         </div>
       </div>
     </footer>
+
+    <div class="payment-modal" id="paymentModal" aria-hidden="true">
+      <div class="payment-modal-panel" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+        <div class="payment-header">
+          <h3 id="paymentModalTitle">Complete your order</h3>
+          <button class="close-modal" type="button" aria-label="Close payment modal">×</button>
+        </div>
+        <div class="payment-layout">
+          <div>
+            <div class="payment-methods" aria-label="Payment methods">
+              <button class="payment-option" type="button"><span>Apple Pay</span><strong></strong></button>
+              <button class="payment-option" type="button"><span>Google Pay</span><strong>G</strong></button>
+              <button class="payment-option" type="button"><span>Credit Card</span><strong>◈</strong></button>
+            </div>
+            <div class="checkout-embed" aria-label="Checkout area placeholder"></div>
+            <div class="checkout-status">Secure checkout placeholder ready for your Lemon Squeezy URL when provided.</div>
+          </div>
+          <aside class="checkout-summary">
+            <h4>Order summary</h4>
+            <div class="summary-row"><span>Plan</span><strong id="summaryPlan">Single Verification</strong></div>
+            <div class="summary-row"><span>Price</span><strong id="summaryPrice">$4.99</strong></div>
+            <div class="summary-row"><span>Delivery</span><strong>Instant PDF</strong></div>
+            <div class="summary-row"><span>Access</span><strong>Print-ready</strong></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div class="signup-modal" id="signupModal" aria-hidden="true">
+      <div class="signup-panel" role="dialog" aria-modal="true" aria-labelledby="signupModalTitle">
+        <h3 id="signupModalTitle">Create your account</h3>
+        <form>
+          <input type="text" name="name" placeholder="Full name" required />
+          <input type="email" name="email" placeholder="Work email" required />
+          <input type="password" name="password" placeholder="Create password" required />
+          <button class="button button-green" type="submit">Continue to payment</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const workspaceFields = {
+        employeeName: document.getElementById('workspaceEmployeeName'),
+        employerName: document.getElementById('workspaceEmployerName'),
+        position: document.getElementById('workspacePosition'),
+        salary: document.getElementById('workspaceSalary'),
+        workLocation: document.getElementById('workspaceWorkLocation')
+      };
+
+      const previewTargets = {
+        employeeName: document.getElementById('previewEmployeeName'),
+        employerName: document.getElementById('previewEmployerName'),
+        position: document.getElementById('previewPosition'),
+        salary: document.getElementById('previewSalary'),
+        workLocation: document.getElementById('previewWorkLocation')
+      };
+
+      function syncWorkspacePreview() {
+        Object.entries(workspaceFields).forEach(([key, input]) => {
+          const value = input.value.trim() || '—';
+          previewTargets[key].textContent = value;
+        });
+      }
+
+      Object.values(workspaceFields).forEach((input) => input.addEventListener('input', syncWorkspacePreview));
+      syncWorkspacePreview();
+
+      const paymentModal = document.getElementById('paymentModal');
+      const signupModal = document.getElementById('signupModal');
+      const summaryPlan = document.getElementById('summaryPlan');
+      const summaryPrice = document.getElementById('summaryPrice');
+
+      function openPaymentModal(planName, priceText) {
+        summaryPlan.textContent = planName;
+        summaryPrice.textContent = priceText;
+        paymentModal.classList.add('open');
+        paymentModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closePaymentModal() {
+        paymentModal.classList.remove('open');
+        paymentModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function openSignupModal(planName, priceText) {
+        summaryPlan.textContent = planName;
+        summaryPrice.textContent = priceText;
+        signupModal.classList.add('open');
+        signupModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeSignupModal() {
+        signupModal.classList.remove('open');
+        signupModal.setAttribute('aria-hidden', 'true');
+      }
+
+      document.getElementById('downloadWorkspacePdf').addEventListener('click', () => {
+        openPaymentModal('Single Verification', '$4.99');
+      });
+
+      document.querySelectorAll('.pricing-trigger').forEach((button) => {
+        button.addEventListener('click', () => {
+          openSignupModal(button.dataset.plan, button.dataset.price);
+        });
+      });
+
+      document.querySelector('#paymentModal .close-modal').addEventListener('click', closePaymentModal);
+      document.querySelector('#signupModal .close-modal')?.addEventListener('click', closeSignupModal);
+
+      paymentModal.addEventListener('click', (event) => {
+        if (event.target === paymentModal) closePaymentModal();
+      });
+      signupModal.addEventListener('click', (event) => {
+        if (event.target === signupModal) closeSignupModal();
+      });
+
+      document.querySelector('#signupModal form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        closeSignupModal();
+        openPaymentModal(summaryPlan.textContent, summaryPrice.textContent);
+      });
+    </script>
   </body>
 </html>

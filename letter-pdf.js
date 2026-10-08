@@ -61,7 +61,7 @@
     });
   }
 
-  function createPdfDocument(text, qrMatrix) {
+  function createPdfDocument(text, qrMatrix, initials) {
     const lines = wrapPdfLines(text);
     const lineHeights = { title: 36, metadata: 16, section: 22, body: 16, blank: 8 };
     const pages = [[]];
@@ -137,6 +137,9 @@
         }
         commands.push(`BT /F1 7 Tf 72 102 Td (Scan to verify: ${escapePdfText("US-EVS document reference")}) Tj ET`);
       }
+      if (typeof initials === "string" && /^[A-Z]{2,5}$/.test(initials)) {
+        commands.push(`BT /F2 10 Tf 72 38 Td (Digital initials: ${initials}) Tj ET`);
+      }
       const stream = commands.join("\n");
 
       objects.push(
@@ -161,12 +164,12 @@
     return pdf;
   }
 
-  function createPdfBlob(text, qrMatrix) {
-    return new Blob([createPdfDocument(text, qrMatrix)], { type: "application/pdf" });
+  function createPdfBlob(text, qrMatrix, initials) {
+    return new Blob([createPdfDocument(text, qrMatrix, initials)], { type: "application/pdf" });
   }
 
-  function createPdfBuffer(text, qrMatrix) {
-    return Buffer.from(createPdfDocument(text, qrMatrix), "ascii");
+  function createPdfBuffer(text, qrMatrix, initials) {
+    return Buffer.from(createPdfDocument(text, qrMatrix, initials), "ascii");
   }
 
   return { getLetterLines, createPdfBlob, createPdfBuffer };
