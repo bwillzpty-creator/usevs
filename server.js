@@ -929,16 +929,16 @@ function renderStateLandingPage(stateName, stateTitle) {
     <title>${stateTitle}</title>
     <link rel="stylesheet" href="/public/brand.css" />
     <style>
-      :root { --ink:#1f2937; --green:#176b55; --line:#dfe5e7; --paper:#fff; --canvas:#f3f6f5; }
+      :root { --ink:#f8fafc; --accent:#f97316; --line:#334155; --paper:#1e293b; --canvas:#131c2e; }
       * { box-sizing: border-box; }
       body { margin:0; background:var(--canvas); color:var(--ink); font: 16px Arial, sans-serif; }
-      main { width:min(760px, calc(100% - 32px)); margin: 64px auto 80px; }
+      main { width:min(1200px, calc(100% - 3rem)); margin: 64px auto 80px; }
       .card { padding: 32px; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(15,23,42,.08); }
       h1 { margin: 0 0 14px; font-size: clamp(2.1rem, 4vw, 3.2rem); line-height: 1.1; }
       p { color: #4b5d67; line-height: 1.7; }
-      .meta { margin-top: 18px; color: var(--green); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
-      a.button { display:inline-block; margin-top:18px; padding: 12px 18px; background: var(--green); color: #fff; text-decoration:none; border-radius: 4px; font-weight:700; }
-      footer { width:min(760px, calc(100% - 32px)); margin: 0 auto 32px; color:#41515b; font-size:12px; }
+      .meta { margin-top: 18px; color: var(--accent); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
+      a.button { display:inline-block; margin-top:18px; padding: 12px 18px; background: var(--accent); color: #131c2e; text-decoration:none; border-radius: 4px; font-weight:700; }
+      footer { width:min(1200px, calc(100% - 3rem)); margin: 0 auto 32px; color:#cbd5e1; font-size:12px; }
     </style>
   </head>
   <body>
@@ -1398,6 +1398,11 @@ function createWordDocument(record, qrBuffer) {
           new TextRun({ text: `US-EVS · ${record.referenceNumber} · Scan to verify authenticity  `, size: 16 }),
           new ImageRun({ data: qrBuffer, transformation: { width: 60, height: 60 } })
         ]
+      }), new Paragraph({
+        children: [new TextRun({
+          text: 'us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.',
+          size: 12
+        })]
       })] }) },
       children: content
     }]

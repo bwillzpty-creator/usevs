@@ -14,14 +14,14 @@
     <script src="/script.js" defer></script>
     <style>
       :root {
-        --ink: #1f2937;
-        --muted: #65747b;
-        --line: #d9e0e3;
+        --ink: #1e293b;
+        --muted: #94a3b8;
+        --line: #334155;
         --paper: #ffffff;
-        --canvas: #f3f6f5;
-        --green: #176b55;
-        --deep: #163c33;
-        --rust: #c8754d;
+        --canvas: #131c2e;
+        --accent: #f97316;
+        --deep: #131c2e;
+        --rust: #ff7a00;
       }
       * {
         box-sizing: border-box;
@@ -36,13 +36,15 @@
         color: inherit;
       }
       .shell {
-        width: min(1160px, calc(100% - 48px));
+        box-sizing: border-box;
+        width: min(1200px, 100%);
         margin: 0 auto;
+        padding-inline: 24px;
       }
       .site-header {
         position: relative;
         z-index: 2;
-        background: #fff;
+        background: var(--canvas);
         border-bottom: 1px solid var(--line);
       }
       .header-inner {
@@ -86,7 +88,7 @@
         text-decoration: none;
       }
       .main-nav a:hover {
-        color: var(--green);
+        color: var(--accent);
       }
       .hero {
         overflow: hidden;
@@ -96,21 +98,26 @@
         color: #fff;
       }
       .hero-inner {
+        min-width: 0;
         min-height: 590px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
         align-items: center;
         gap: clamp(32px, 7vw, 86px);
-        padding-top: 54px;
-        padding-bottom: 70px;
+        padding-top: 64px;
+        padding-bottom: 64px;
+      }
+      .hero-inner > div:first-child {
+        min-width: 0;
       }
       .eyebrow {
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #c5d9d1;
+        color: #cbd5e1;
         font-size: 11px;
         font-weight: 700;
+        margin: 0 0 32px;
       }
       .eyebrow::before {
         width: 24px;
@@ -120,7 +127,7 @@
       }
       h1 {
         max-width: 620px;
-        margin: 20px 0 18px;
+        margin: 0 0 32px;
         font-family: "Source Serif 4", Georgia, serif;
         font-size: 64px;
         font-weight: 400;
@@ -129,8 +136,13 @@
       .hero-copy {
         max-width: 570px;
         margin: 0;
-        color: #d2dfda;
+        color: #cbd5e1;
         font-size: 17px;
+        line-height: 1.7;
+      }
+      .hero-detail {
+        margin: 16px 0 0;
+        color: #cbd5e1;
         line-height: 1.7;
       }
       .hero-actions {
@@ -159,13 +171,13 @@
       .button-outline {
         border-color: rgba(255, 255, 255, 0.42);
         background: transparent;
+        color: #131c2e;
+      }
+      .button-orange {
+        background: var(--accent);
         color: #fff;
       }
-      .button-green {
-        background: var(--green);
-        color: #fff;
-      }
-      .button-rust {
+      .button-orange {
         background: var(--rust);
         color: #fff;
       }
@@ -177,13 +189,14 @@
         display: flex;
         flex-wrap: wrap;
         gap: 18px;
+        padding: 0;
         margin-top: 26px;
-        color: #c5d9d1;
+        color: #cbd5e1;
         font-size: 12px;
       }
       .hero-notes span::before {
         margin-right: 7px;
-        color: #d88a61;
+        color: #f97316;
         content: "•";
       }
       .document-wrap {
@@ -197,7 +210,7 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 12px;
-        color: #d2dfda;
+        color: #cbd5e1;
         font-size: 10px;
         font-weight: 700;
       }
@@ -216,15 +229,18 @@
       .letter-preview-head small {
         display: block;
         margin-bottom: 10px;
-        color: var(--green);
-        font-size: 9px;
+        color: var(--accent);
+        font-size: 0.65rem;
         font-weight: 700;
-        letter-spacing: 0;
+        letter-spacing: 0.05em;
       }
       .letter-preview h2 {
         margin: 0;
         font-family: "Source Serif 4", Georgia, serif;
-        font-size: 15px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
       }
       .letter-preview-meta {
         display: flex;
@@ -232,19 +248,24 @@
         gap: 12px;
         margin: 13px 0 20px;
         color: var(--muted);
-        font-size: 9px;
+        font-size: 0.65rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
       .letter-preview h3 {
         margin: 17px 0 7px;
-        color: var(--green);
-        font-size: 9px;
+        color: var(--accent);
+        font-size: 0.65rem;
+        letter-spacing: 0.05em;
+        font-weight: 700;
         text-transform: uppercase;
       }
       .letter-preview p {
         margin: 4px 0;
-        color: #45535a;
-        font-size: 10px;
+        color: #334155;
+        font-size: 0.75rem;
         line-height: 1.6;
+        font-weight: 400;
       }
       .sample-stamp {
         display: inline-block;
@@ -259,7 +280,7 @@
       }
       .trust-strip {
         border-bottom: 1px solid var(--line);
-        background: #fff;
+        background: #131c2e;
       }
       .trust-strip-inner {
         min-height: 74px;
@@ -273,7 +294,7 @@
         align-items: center;
         gap: 10px;
         padding: 12px 16px;
-        color: #405049;
+        color: #cbd5e1;
         font-size: 12px;
         font-weight: 600;
       }
@@ -286,7 +307,7 @@
       }
       .section-kicker {
         margin: 0 0 10px;
-        color: var(--green);
+        color: var(--accent);
         font-size: 11px;
         font-weight: 700;
       }
@@ -317,7 +338,7 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 16px;
-        color: #dfe9e5;
+        color: #e2e8f0;
         font-size: 10px;
         font-weight: 700;
       }
@@ -348,14 +369,15 @@
       }
       .workspace-form {
         display: grid;
-        gap: 12px;
+        gap: 16px;
+        padding: 16px;
       }
       .input-group {
         display: grid;
         gap: 8px;
       }
       .input-group label {
-        color: #dfe9e5;
+        color: #e2e8f0;
         font-size: 11px;
         font-weight: 700;
       }
@@ -377,14 +399,15 @@
         position: relative;
         overflow: hidden;
         min-height: 370px;
-        background: #f5f7f6;
+        padding: 0;
+        background: #fff;
       }
       .preview-watermark {
         position: absolute;
         right: 18px;
         bottom: 18px;
         transform: rotate(-18deg);
-        color: rgba(23, 107, 85, 0.12);
+        color: rgba(249, 115, 22, 0.12);
         font-size: 40px;
         font-weight: 800;
         letter-spacing: 0.12em;
@@ -393,7 +416,7 @@
         position: relative;
         z-index: 1;
         min-height: 100%;
-        padding: 18px 18px 12px;
+        padding: 24px;
         background: #fff;
         color: var(--ink);
         box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.08);
@@ -403,31 +426,54 @@
         align-items: baseline;
         justify-content: space-between;
         gap: 12px;
-        padding-bottom: 12px;
+        padding: 8px 0 16px;
         border-bottom: 1px solid var(--line);
       }
       .preview-document-head small {
-        color: var(--green);
-        font-size: 9px;
+        color: var(--accent);
+        font-size: 0.65rem;
         font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .preview-document-head span {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .preview-document .preview-issued {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
       .preview-document h3 {
-        margin: 18px 0 12px;
-        color: var(--green);
-        font-size: 13px;
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-align: center;
         text-transform: uppercase;
       }
       .preview-document p {
-        margin: 0 0 6px;
-        font-size: 12px;
+        margin: 12px 0 0;
+        font-size: 0.75rem;
+        font-weight: 400;
         line-height: 1.6;
+      }
+      .preview-document p strong {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
       .preview-seal {
         display: inline-block;
         margin-top: 12px;
         padding: 5px 8px;
-        border: 1px solid rgba(200, 117, 77, 0.5);
-        background: rgba(200, 117, 77, 0.12);
+        border: 1px solid rgba(249, 115, 22, 0.5);
+        background: rgba(249, 115, 22, 0.12);
         color: var(--rust);
         font-size: 9px;
         font-weight: 700;
@@ -443,12 +489,12 @@
         flex-direction: column;
         padding: 22px 20px 18px;
         border: 1px solid var(--line);
-        background: #fff;
+        background: #1e293b;
         color: var(--ink);
       }
       .pricing-card.featured {
-        border-color: rgba(23, 107, 85, 0.5);
-        box-shadow: 0 18px 38px rgba(25, 63, 61, 0.08);
+        border-color: rgba(249, 115, 22, 0.65);
+        box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
       }
       .pricing-card h3 {
         margin: 0 0 10px;
@@ -465,7 +511,7 @@
         font-family: "Source Serif 4", Georgia, serif;
         font-size: 34px;
         font-weight: 700;
-        color: var(--green);
+        color: var(--accent);
       }
       .price span {
         font-size: 12px;
@@ -559,14 +605,14 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        background: #edf5f2;
-        color: var(--green);
+        background: #422b20;
+        color: var(--brand-orange);
       }
       .checkout-summary {
         padding: 16px;
         border: 1px solid var(--line);
         border-radius: 12px;
-        background: #f3f6f5;
+        background: #1e293b;
       }
       .checkout-summary h4 {
         margin: 0 0 12px;
@@ -591,7 +637,7 @@
         margin-top: 16px;
         border: 1px solid var(--line);
         border-radius: 10px;
-        background: linear-gradient(180deg, #f6fbf9 0%, #eef5f2 100%);
+        background: #131c2e;
       }
       .checkout-status {
         margin-top: 12px;
@@ -615,7 +661,7 @@
         width: min(520px, 100%);
         padding: 24px;
         border-radius: 14px;
-        background: #fff;
+        background: #1e293b;
         color: var(--ink);
         box-shadow: 0 30px 52px rgba(0, 0, 0, 0.2);
       }
@@ -642,7 +688,7 @@
       .footer {
         padding: 28px 0;
         background: var(--deep);
-        color: #e5eeea;
+        color: #e2e8f0;
       }      .footer-inner {
         display: flex;
         flex-wrap: wrap;
@@ -660,7 +706,7 @@
         height: 36px;
       }
       .footer small {
-        color: #c5d9d1;
+        color: #cbd5e1;
         font-size: 11px;
       }
       .footer-links {
@@ -670,7 +716,7 @@
         font-size: 12px;
       }
       .footer-links a {
-        color: #e5eeea;
+        color: #e2e8f0;
       }
       .footer-legal {
         width: 100%;
@@ -683,24 +729,137 @@
         border-top: 1px solid rgba(229, 238, 234, 0.24);
       }
       .footer-legal p {
+        max-width: 65ch;
         margin: 0;
-        color: #c5d9d1;
+        color: #cbd5e1;
         font-size: 11px;
         line-height: 1.6;
       }
+      .content-section p,
+      .hero-copy,
+      .hero-detail {
+        max-width: 65ch;
+      }
+      .how-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 28px;
+      }
+      .how-step {
+        min-height: 100%;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #1e293b;
+      }
+      .how-step > strong {
+        color: var(--brand-orange);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+      .how-step h3 {
+        margin: 12px 0 8px;
+      }
+      .how-step p {
+        margin: 0;
+        color: var(--brand-muted);
+      }
+      .trust-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 28px;
+      }
+      .trust-list {
+        display: grid;
+        gap: 12px;
+      }
+      .trust-item {
+        border-radius: 12px;
+        padding: 20px 22px;
+        border: 1px solid var(--line);
+        background: #1e293b;
+      }
+      .trust-item p {
+        margin: 8px 0 0;
+        color: var(--brand-muted);
+      }
+      .workspace-card {
+        border-radius: 12px;
+        background: #1e293b;
+      }
+      .workspace-form {
+        border-radius: 8px;
+        background: #131c2e;
+      }
+      .workspace-preview {
+        border-radius: 8px;
+      }
       .faq-item {
-        padding: 18px 0;
-        border-top: 1px solid var(--line);
+        margin-top: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #1e293b;
       }
       .faq-item h3 {
         margin: 0 0 7px;
         font-size: 16px;
       }
       .faq-item p {
-        max-width: 780px;
+        max-width: 65ch;
         margin: 0;
         color: var(--muted);
         line-height: 1.65;
+      }
+      .footer {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+      .footer-links a,
+      .footer-links a:hover,
+      .main-nav a:hover {
+        color: #f97316 !important;
+      }
+      .hero-actions .button.button-orange {
+        border-color: #f97316 !important;
+        background: #f97316 !important;
+        color: #0f172a !important;
+      }
+      .hero-actions .button.button-outline {
+        border-color: #f97316 !important;
+        background: transparent !important;
+        color: #f97316 !important;
+      }
+      .hero-actions .button.button-outline:hover {
+        background: #f97316 !important;
+        color: #0f172a !important;
+      }
+      .pricing-grid .pricing-trigger {
+        border: 1px solid #f97316 !important;
+        background: #f97316 !important;
+        color: #0f172a !important;
+        transition: background-color 150ms ease, filter 150ms ease;
+      }
+      .pricing-grid .pricing-trigger:hover {
+        border-color: #ff9142 !important;
+        background: #ff9142 !important;
+        color: #0f172a !important;
+      }
+      .button.button-outline {
+        border-color: #f97316 !important;
+        background: transparent !important;
+        color: #f97316 !important;
+      }
+      .button.button-outline:hover {
+        background: #f97316 !important;
+        color: #131c2e !important;
+      }
+      .preview-document-head {
+        padding: 8px 0 16px;
       }
       @media (max-width: 850px) {
         .hero-inner {
@@ -716,7 +875,7 @@
       }
       @media (min-width: 1280px) {
         .shell {
-          width: min(1240px, calc(100% - 64px));
+          width: min(1200px, 100%);
         }
       }
       @media (max-width: 767px) {
@@ -726,7 +885,7 @@
       }
       @media (max-width: 700px) {
         .shell {
-          width: min(100% - 32px, 560px);
+          width: min(100%, 560px);
         }
         .header-inner {
           min-height: 72px;
@@ -741,7 +900,7 @@
         .hero-inner {
           min-height: 0;
           grid-template-columns: 1fr;
-          padding-top: 58px;
+          padding-top: 48px;
           padding-bottom: 42px;
         }
         h1 {
@@ -811,6 +970,36 @@
           flex-direction: column;
         }
       }
+      @media (max-width: 1024px) {
+        .hero-inner,
+        .workspace-grid,
+        .pricing-grid,
+        .how-grid,
+        .trust-grid,
+        .trust-strip-inner,
+        .payment-layout {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+        .hero-inner {
+          gap: 32px;
+          padding: 48px 24px !important;
+        }
+        .workspace-form,
+        .workspace-preview {
+          min-width: 0;
+          width: 100%;
+        }
+        .footer-inner,
+        .footer-legal {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+      @media (min-width: 1025px) {
+        .hero-inner {
+          padding: 64px 24px !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -836,7 +1025,7 @@
             <p class="hero-copy">Standardized verification letters for HR, residential leasing, commercial lending, immigration, and background checks.</p>
             <p class="hero-detail">US-EVS creates traceable employment records for corporate HR, lenders, property managers, government agencies, and former employee requests.</p>
             <div class="hero-actions">
-              <a class="button button-light" href="#workspace">Create a letter</a>
+              <a class="button button-orange" href="#workspace">Create a letter</a>
               <a class="button button-outline" href="/lookup">Verify Document ID</a>
               <a class="button button-outline" href="/dashboard">View Record History</a>
             </div>
@@ -867,11 +1056,15 @@
         </div>
       </section>
 
-      <section class="trust-strip" aria-label="Service highlights">
-        <div class="shell trust-strip-inner">
-          <div class="trust-point"><b>01</b> Reference number on every letter</div>
-          <div class="trust-point"><b>02</b> Public verification by reference</div>
-          <div class="trust-point"><b>03</b> Email and PDF delivery</div>
+      <section class="content-section" aria-labelledby="how-it-works-title">
+        <div class="shell">
+          <p class="section-kicker">THREE SIMPLE STEPS</p>
+          <h2 class="section-title" id="how-it-works-title">Get a letter ready to share.</h2>
+          <div class="how-grid">
+            <article class="how-step"><strong>STEP 01</strong><h3>Enter employment details</h3><p>Provide the employee, employer, role, and start date.</p></article>
+            <article class="how-step"><strong>STEP 02</strong><h3>Generate the record</h3><p>Review the structured letter, reference, and timestamp.</p></article>
+            <article class="how-step"><strong>STEP 03</strong><h3>Share with confidence</h3><p>Download a PDF or let the recipient verify the reference online.</p></article>
+          </div>
         </div>
       </section>
 
@@ -903,7 +1096,7 @@
                   <label for="workspaceWorkLocation">Work Location</label>
                   <input id="workspaceWorkLocation" type="text" value="Austin, Texas" placeholder="Enter work location" />
                 </div>
-                <button class="button button-green" type="button" id="downloadWorkspacePdf">Download Print-Ready PDF</button>
+                <button class="button button-orange" type="button" id="downloadWorkspacePdf">Download Print-Ready PDF</button>
               </div>
               <div class="workspace-preview" aria-live="polite">
                 <div class="preview-watermark">US-EVS</div>
@@ -918,7 +1111,7 @@
                   <p><strong>Position:</strong> <span id="previewPosition">Operations Analyst</span></p>
                   <p><strong>Salary:</strong> <span id="previewSalary">$96,000</span></p>
                   <p><strong>Work Location:</strong> <span id="previewWorkLocation">Austin, Texas</span></p>
-                  <p><strong>Issued:</strong> 26 Sep 2026</p>
+                  <p class="preview-issued"><strong>Issued:</strong> 26 Sep 2026</p>
                   <span class="preview-seal">SAMPLE DOCUMENT</span>
                 </article>
               </div>
@@ -966,17 +1159,53 @@
         </div>
       </section>
 
+      <section class="trust-strip" aria-label="Service highlights">
+        <div class="shell trust-strip-inner">
+          <div class="trust-point"><b>01</b> Reference number on every letter</div>
+          <div class="trust-point"><b>02</b> Public verification by reference</div>
+          <div class="trust-point"><b>03</b> Email and PDF delivery</div>
+        </div>
+      </section>
+
       <section class="content-section">
         <div class="shell">
-          <p class="section-kicker">THREE SIMPLE STEPS</p>
-          <h2 class="section-title">Get a letter ready to share.</h2>
-          <div class="how-grid">
-            <article class="how-step"><strong>STEP 01</strong><h3>Enter employment details</h3><p>Provide the employee, employer, role, and start date.</p></article>
-            <article class="how-step"><strong>STEP 02</strong><h3>Generate the record</h3><p>Review the structured letter, reference, and timestamp.</p></article>
-            <article class="how-step"><strong>STEP 03</strong><h3>Share with confidence</h3><p>Download a PDF or let the recipient verify the reference online.</p></article>
+          <p class="section-kicker">PRICING</p>
+          <h2 class="section-title">Simple public pricing for verification workflows.</h2>
+          <div class="pricing-grid">
+            <article class="pricing-card">
+              <h3>Single-Use Verification</h3>
+              <div class="price"><strong>$4.99</strong><span>one-time</span></div>
+              <ul>
+                <li>One-off employment verification document</li>
+                <li>PDF export for print or email</li>
+                <li>Reference number included</li>
+              </ul>
+              <button class="button button-orange pricing-trigger" data-plan="Single-Use Verification" data-price="$4.99" type="button">Select plan</button>
+            </article>
+            <article class="pricing-card featured">
+              <h3>Recruiter Pro</h3>
+              <div class="price"><strong>$24.99</strong><span>per month</span></div>
+              <ul>
+                <li>Unlimited verification access</li>
+                <li>Recruiter and small-team workflows</li>
+                <li>Audit trail for active cases</li>
+              </ul>
+              <button class="button button-orange pricing-trigger" data-plan="Recruiter Pro" data-price="$24.99/month" type="button">Select plan</button>
+            </article>
+            <article class="pricing-card">
+              <h3>Enterprise Vault</h3>
+              <div class="price"><strong>$269.99</strong><span>per year</span></div>
+              <ul>
+                <li>High-volume verification generation</li>
+                <li>Tracking, storage, and audit retention</li>
+                <li>Dedicated compliance controls</li>
+              </ul>
+              <button class="button button-orange pricing-trigger" data-plan="Enterprise Vault" data-price="$269.99/year" type="button">Select plan</button>
+            </article>
           </div>
         </div>
       </section>
+
       <section class="content-section" aria-labelledby="us-faq-title">
         <div class="shell">
           <p class="section-kicker">US COMPLIANCE</p>
@@ -993,45 +1222,6 @@
             <h3>Does a US-EVS reference confirm FCRA compliance or background check rules?</h3>
             <p>No. A US-EVS reference confirms that a verification record exists in the platform. It does not certify compliance with the Fair Credit Reporting Act, state consumer-protection laws, or any employer's independent screening program.</p>
           </article>
-        </div>
-      </section>
-
-      <section class="content-section">
-        <div class="shell">
-          <p class="section-kicker">PRICING</p>
-          <h2 class="section-title">Simple public pricing for verification workflows.</h2>
-          <div class="pricing-grid">
-            <article class="pricing-card">
-              <h3>Single Verification</h3>
-              <div class="price"><strong>$4.99</strong><span>one-time</span></div>
-              <ul>
-                <li>One-off employment verification document</li>
-                <li>PDF export for print or email</li>
-                <li>Reference number included</li>
-              </ul>
-              <button class="button button-green pricing-trigger" data-plan="Single Verification" data-price="$4.99" type="button">Select plan</button>
-            </article>
-            <article class="pricing-card featured">
-              <h3>Recruiter Pro</h3>
-              <div class="price"><strong>$24.99</strong><span>per month</span></div>
-              <ul>
-                <li>Unlimited verification access</li>
-                <li>Recruiter and small-team workflows</li>
-                <li>Audit trail for active cases</li>
-              </ul>
-              <button class="button button-rust pricing-trigger" data-plan="Recruiter Pro" data-price="$24.99/month" type="button">Select plan</button>
-            </article>
-            <article class="pricing-card">
-              <h3>Enterprise Vault</h3>
-              <div class="price"><strong>$269.99</strong><span>per year</span></div>
-              <ul>
-                <li>High-volume verification generation</li>
-                <li>Tracking, storage, and audit retention</li>
-                <li>Dedicated compliance controls</li>
-              </ul>
-              <button class="button button-outline pricing-trigger" data-plan="Enterprise Vault" data-price="$269.99/year" type="button">Select plan</button>
-            </article>
-          </div>
         </div>
       </section>
     </main>
@@ -1063,7 +1253,7 @@
     <div class="payment-modal" id="paymentModal" aria-hidden="true">
       <div class="payment-modal-panel" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
         <div class="payment-header">
-          <h3 id="paymentModalTitle">Complete your order</h3>
+          <h3 id="paymentModalTitle">Lemon Squeezy checkout</h3>
           <button class="close-modal" type="button" aria-label="Close payment modal">×</button>
         </div>
         <div class="payment-layout">
@@ -1073,12 +1263,12 @@
               <button class="payment-option" type="button"><span>Google Pay</span><strong>G</strong></button>
               <button class="payment-option" type="button"><span>Credit Card</span><strong>◈</strong></button>
             </div>
-            <div class="checkout-embed" aria-label="Checkout area placeholder"></div>
-            <div class="checkout-status">Secure checkout placeholder ready for your Lemon Squeezy URL when provided.</div>
+            <div class="checkout-embed" aria-label="Lemon Squeezy checkout area"></div>
+            <div class="checkout-status">Configure a Lemon Squeezy checkout URL to load secure payment here.</div>
           </div>
           <aside class="checkout-summary">
             <h4>Order summary</h4>
-            <div class="summary-row"><span>Plan</span><strong id="summaryPlan">Single Verification</strong></div>
+            <div class="summary-row"><span>Plan</span><strong id="summaryPlan">Single-Use Verification</strong></div>
             <div class="summary-row"><span>Price</span><strong id="summaryPrice">$4.99</strong></div>
             <div class="summary-row"><span>Delivery</span><strong>Instant PDF</strong></div>
             <div class="summary-row"><span>Access</span><strong>Print-ready</strong></div>
@@ -1094,7 +1284,7 @@
           <input type="text" name="name" placeholder="Full name" required />
           <input type="email" name="email" placeholder="Work email" required />
           <input type="password" name="password" placeholder="Create password" required />
-          <button class="button button-green" type="submit">Continue to payment</button>
+          <button class="button button-orange" type="submit">Continue to payment</button>
         </form>
       </div>
     </div>
@@ -1156,12 +1346,12 @@
       }
 
       document.getElementById('downloadWorkspacePdf').addEventListener('click', () => {
-        openPaymentModal('Single Verification', '$4.99');
+        openPaymentModal('Single-Use Verification', '$4.99');
       });
 
       document.querySelectorAll('.pricing-trigger').forEach((button) => {
         button.addEventListener('click', () => {
-          openSignupModal(button.dataset.plan, button.dataset.price);
+          openPaymentModal(button.dataset.plan, button.dataset.price);
         });
       });
 

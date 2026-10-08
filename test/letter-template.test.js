@@ -48,7 +48,10 @@ test('includes the specified separation and rehire sentences for a former employ
 test('stamps digital initials on every generated PDF page', () => {
   const text = Array.from({ length: 100 }, (_, index) => `Employment record detail ${index + 1}`).join('\n');
   const pdf = createPdfBuffer(text, undefined, 'AB');
-  const pageCount = Number(pdf.toString('ascii').match(/\/Count (\d+)/)[1]);
+  const pdfText = pdf.toString('ascii');
+  const pageCount = Number(pdfText.match(/\/Count (\d+)/)[1]);
   assert.ok(pageCount > 1);
-  assert.equal((pdf.toString('ascii').match(/Digital initials: AB/g) || []).length, pageCount);
+  assert.equal((pdfText.match(/Digital initials: AB/g) || []).length, pageCount);
+  assert.equal((pdfText.match(/us-evs\.com is an independent commercial software platform and is not affiliated/g) || []).length, pageCount);
+  assert.equal((pdfText.match(/with any local, state, or federal government agency\./g) || []).length, pageCount);
 });

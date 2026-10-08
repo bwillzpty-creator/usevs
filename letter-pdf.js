@@ -63,6 +63,7 @@
 
   function createPdfDocument(text, qrMatrix, initials) {
     const lines = wrapPdfLines(text);
+    const footerDisclaimer = wrapPdfLines("us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.");
     const lineHeights = { title: 36, metadata: 16, section: 22, body: 16, blank: 8 };
     const pages = [[]];
     let pageHeight = 0;
@@ -140,6 +141,9 @@
       if (typeof initials === "string" && /^[A-Z]{2,5}$/.test(initials)) {
         commands.push(`BT /F2 10 Tf 72 38 Td (Digital initials: ${initials}) Tj ET`);
       }
+      footerDisclaimer.forEach((line, index) => {
+        commands.push(`BT /F1 5 Tf 72 ${22 - index * 7} Td (${escapePdfText(line.text)}) Tj ET`);
+      });
       const stream = commands.join("\n");
 
       objects.push(
