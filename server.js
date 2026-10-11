@@ -1192,7 +1192,7 @@ app.get('/landing', (req, res) => {
 });
 
 app.get('/verify', requireIssuerPage, (req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'verify.html'))
+  res.sendFile(path.join(__dirname, 'verify.html'))
 );
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
 app.get('/dashboard', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
