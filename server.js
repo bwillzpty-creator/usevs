@@ -560,6 +560,13 @@ async function requireIssuerPage(req, res, next) {
   }
 }
 
+function requireSignin(req, res, next) {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ success: false, message: "Authentication required." });
+  }
+  next();
+}
+
 function isValidReviewer(req) {
   const authorization = req.get('authorization') || '';
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
@@ -1183,7 +1190,9 @@ app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
-app.get('/verify', (req, res) => res.sendFile(path.join(__dirname, 'verify.html')));
+app.get('/verify', requireSignin, (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'verify.html'))
+);
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
 app.get('/dashboard', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/lookup.js', (req, res) => res.sendFile(path.join(__dirname, 'lookup.js')));
