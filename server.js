@@ -52,7 +52,13 @@ const issuerAuth = new IssuerAuth({
   emailFrom,
   publicBaseUrl: process.env.PUBLIC_BASE_URL,
   reviewToken: process.env.ISSUER_REVIEW_TOKEN,
-  businessPostalAddress: process.env.BUSINESS_POSTAL_ADDRESS
+  businessPostalAddress: process.env.BUSINESS_POSTAL_ADDRESS,
+  qaOtpEmail: process.env.NODE_ENV === 'development' && process.env.ENABLE_QA_OTP === 'true'
+    ? process.env.QA_OTP_EMAIL
+    : '',
+  qaOtpCode: process.env.NODE_ENV === 'development' && process.env.ENABLE_QA_OTP === 'true'
+    ? process.env.QA_OTP_CODE
+    : ''
 });
 
 async function ensureJsonArrayFile(filePath) {
@@ -536,6 +542,21 @@ async function requireIssuerSession(req, res, next) {
   } catch (error) {
     console.error('Unable to validate HR session:', error);
     return res.status(500).json({ success: false, message: 'Unable to validate issuer authorization.' });
+  }
+}
+
+async function requireIssuerPage(req, res, next) {
+  try {
+    const session = await issuerAuth.getSession(req);
+    if (!session) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return next();
+  } catch (error) {
+    console.error('Unable to validate protected page session:', error);
+    return res.status(503).send('Employer sign-in is temporarily unavailable.');
   }
 }
 

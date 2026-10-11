@@ -80,7 +80,7 @@ function parseBusinessDocument(value) {
 }
 
 class IssuerAuth {
-  constructor({ storePath, encryptionKey, emailTransport, emailFrom, publicBaseUrl, reviewToken, businessPostalAddress }) {
+  constructor({ storePath, encryptionKey, emailTransport, emailFrom, publicBaseUrl, reviewToken, businessPostalAddress, qaOtpEmail, qaOtpCode }) {
     this.storePath = storePath;
     this.encryptionKey = readEncryptionKey(encryptionKey);
     this.emailTransport = emailTransport;
@@ -88,6 +88,8 @@ class IssuerAuth {
     this.publicBaseUrl = typeof publicBaseUrl === 'string' ? publicBaseUrl.replace(/\/+$/, '') : '';
     this.businessPostalAddress = typeof businessPostalAddress === 'string' ? businessPostalAddress.trim() : '';
     this.reviewToken = typeof reviewToken === 'string' && reviewToken.length >= 32 ? reviewToken : '';
+    this.qaOtpEmail = normalizeEmail(qaOtpEmail);
+    this.qaOtpCode = typeof qaOtpCode === 'string' && /^\d{6}$/.test(qaOtpCode) ? qaOtpCode : '';
     this.challenges = new Map();
     this.sessions = new Map();
     this.loginRate = new Map();
@@ -360,7 +362,6 @@ class IssuerAuth {
   }
 
   async beginSignIn(emailValue, password, remoteAddress) {
-    if (!this.emailTransport) throw new Error('One-time code delivery is not configured.');
     const email = normalizeEmail(emailValue);
     const now = Date.now();
     if (!EMAIL_PATTERN.test(email) || email.length > 254) throw new Error('Sign-in failed or employer authorization is incomplete.');
@@ -402,22 +403,28 @@ class IssuerAuth {
       throw new Error('Sign-in failed or employer authorization is incomplete.');
     }
 
-    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const qaOnly = Boolean(this.qaOtpCode) && email === this.qaOtpEmail;
+    if (!this.emailTransport && !qaOnly) throw new Error('One-time code delivery is not configured.');
+
+    const code = qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const challengeId = crypto.randomBytes(24).toString('base64url');
-    await this.emailTransport.sendMail({
-      from: this.emailFrom,
-      to: officer.email,
-      subject: 'Your HR sign-in verification code',
-      text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.getEmailFooter()}`
-    });
+    if (!qaOnly) {
+      await this.emailTransport.sendMail({
+        from: this.emailFrom,
+        to: officer.email,
+        subject: 'Your HR sign-in verification code',
+        text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.getEmailFooter()}`
+      });
+    }
     this.challenges.set(challengeId, {
       employerId: employer.id,
       officerId: officer.id,
       codeHash: digest(code),
       expiresAt: now + CHALLENGE_LIFETIME_MS,
-      attempts: 0
+      attempts: 0,
+      qaOnly
     });
-    return { challengeId };
+    return { challengeId, qaOnly };
   }
 
   async completeSignIn(challengeId, code) {
