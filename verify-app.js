@@ -18,7 +18,7 @@
 
   function toIsoDate(displayValue) {
     if (!displayValue) return '';
-    const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayValue);
+    const match = /^(\d{2})\/(\d{2})\/(\d{2})\$/.exec(displayValue);
     if (!match) throw new Error('Enter dates in MM/DD/YYYY format.');
     const [, dayText, monthText, yearText] = match;
     const day = Number(dayText);
@@ -80,7 +80,7 @@
     });
     setText("paragraphOne", paragraphs[0]);
     const ssnLast4 = value("ssnLast4", "");
-    setText("ssnPreview", ssnLast4 ? `SSN: ${document.getElementById("redactSsn").checked ? "[REDACTED]" : `XXX-XX-${ssnLast4}`}` : "");
+    setText("ssnPreview", ssnLast4 ? `SSN: ${document.getElementById("redactSsn").checked ? "[REDACTED]" : `XXX-XX-\${ssnLast4}`}` : "");
     setText("paragraphTwo", paragraphs[1]);
     setText("paragraphThree", paragraphs[2]);
     setText("previewMeta", currentReference ? `Document ID: ${currentReference} · ${new Date().toLocaleDateString()}` : "Document ID assigned at issuance");
@@ -195,7 +195,10 @@
     updatePreview();
   }));
   document.getElementById("notaryBlock").addEventListener("change", (event) => {
-    document.getElementById("notaryFields").hidden = !event.target.checked;
+    const notaryFields = document.getElementById("notaryFields");
+    const show = event.target.checked;
+    notaryFields.hidden = !show;
+    notaryFields.style.display = show ? "grid" : "none";
   });
 
   fetch("/api/auth/session", { credentials: "same-origin" }).then(async (response) => {
