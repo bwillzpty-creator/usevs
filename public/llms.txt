@@ -15,7 +15,7 @@
 - Payment initiation is not enabled for charging users. The payment ledger is infrastructure only.
 
 ## Public information
-- Home: https://www.us-evs.com/
-- Terms: https://www.us-evs.com/public/terms-and-conditions.html
-- Privacy: https://www.us-evs.com/public/privacy-policy.html
-- Support: https://www.us-evs.com/public/contact-support.html
+- Home: https://usevs.com/
+- Terms: https://usevs.com/public/terms-and-conditions.html
+- Privacy: https://usevs.com/public/privacy-policy.html
+- Support: https://usevs.com/public/contact-support.html

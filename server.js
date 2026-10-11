@@ -44,6 +44,7 @@ let historyWriteQueue = Promise.resolve();
 let letterDataWriteQueue = Promise.resolve();
 let database;
 let paymentLedger;
+const gumroadProductPermalinks = new Set(['Single-Use', 'RecruiterPro', 'EnterpriseVault']);
 const issuerAuth = new IssuerAuth({
   storePath: issuerAccountsPath,
   encryptionKey: process.env.DATA_ENCRYPTION_KEY,
@@ -464,6 +465,40 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit:
 
 app.use(express.json({ limit: '7mb' }));
 app.use(express.urlencoded({ extended: false }));
+
+app.post('/api/gumroad-webhook', (req, res) => {
+  const {
+    seller_id: sellerId,
+    product_permalink: productPermalink,
+    email,
+    sale_id: saleId,
+    order_number: orderNumber,
+    cancelled
+  } = req.body || {};
+
+  if (sellerId !== 'zE8eqPgyj3Swjpejz7t_gA==') {
+    return res.status(403).send('Unauthorized request');
+  }
+
+  if (
+    typeof productPermalink !== 'string' || !gumroadProductPermalinks.has(productPermalink) ||
+    typeof email !== 'string' || !email.trim() || email.length > 254 ||
+    typeof saleId !== 'string' || !saleId.trim() || saleId.length > 200 ||
+    (typeof orderNumber !== 'string' && typeof orderNumber !== 'number') ||
+    !String(orderNumber).trim() ||
+    (cancelled !== 'true' && cancelled !== 'false')
+  ) {
+    return res.status(400).send('Invalid Gumroad Ping payload');
+  }
+
+  if (cancelled === 'true') {
+    console.info('[Gumroad] Subscription cancelled', { saleId, orderNumber, productPermalink });
+  } else {
+    console.info('[Gumroad] Order confirmed', { saleId, orderNumber, productPermalink });
+  }
+
+  return res.status(200).send('Webhook processed');
+});
 
 function isSameOriginRequest(req) {
   const origin = req.get('origin');

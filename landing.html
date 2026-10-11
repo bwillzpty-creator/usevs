@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Standardized US Employment Verification System for HR, leasing, lending, and background verification workflows in the United States." />
-    <meta name="application-name" content="Employment Verification USA" />
-    <link rel="canonical" href="https://www.us-evs.com/" />
-    <title>Standardized US Employment Verification System</title>
+    <meta name="application-name" content="US-EVS" />
+    <link rel="canonical" href="https://usevs.com/" />
+    <title>US-EVS | Employment Verification System</title>
+    <script src="https://gumroad.com/js/gumroad.js"></script>
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"US-EVS","alternateName":"Standardized US Employment Verification System","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://www.us-evs.com/","description":"A commercial employment verification platform for authorized U.S. employers, recruiters, and compliance teams.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"US-EVS","alternateName":"Employment Verification System","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://usevs.com/","description":"A commercial employment verification platform for authorized U.S. employers, recruiters, and compliance teams.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
     </script>
     <link rel="stylesheet" href="/public/brand.css" />
     <script src="/script.js" defer></script>
@@ -484,6 +485,20 @@
         gap: 22px;
         margin-top: 30px;
       }
+      .promo-banner {
+        margin: 0 0 24px;
+        padding: 14px 18px;
+        border: 1px solid rgba(249, 115, 22, 0.55);
+        background: rgba(249, 115, 22, 0.12);
+        color: #f8fafc;
+        line-height: 1.6;
+      }
+      .promo-banner strong {
+        color: #fdba74;
+      }
+      .promo-banner em {
+        color: var(--muted);
+      }
       .pricing-card {
         display: flex;
         flex-direction: column;
@@ -527,163 +542,6 @@
       }
       .pricing-card .button {
         margin-top: auto;
-      }
-      .payment-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 80;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background: rgba(15, 30, 32, 0.74);
-        padding: 24px;
-      }
-      .payment-modal.open {
-        display: flex;
-      }
-      .payment-modal-panel {
-        width: min(760px, 100%);
-        max-height: min(82vh, 780px);
-        overflow: auto;
-        padding: 28px 24px 20px;
-        border-radius: 16px;
-        background: #fff;
-        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.22);
-        color: var(--ink);
-      }
-      .payment-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 18px;
-      }
-      .payment-header h3 {
-        margin: 0;
-        color: var(--ink);
-        font-size: 28px;
-      }
-      .close-modal {
-        min-width: 36px;
-        min-height: 36px;
-        padding: 0;
-        border: 1px solid var(--line);
-        border-radius: 50%;
-        background: #fff;
-        color: var(--ink);
-        font-size: 20px;
-        cursor: pointer;
-      }
-      .payment-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-        gap: 22px;
-      }
-      .payment-methods {
-        display: grid;
-        gap: 12px;
-      }
-      .payment-option {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        min-height: 52px;
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #fff;
-        color: var(--ink);
-        font-weight: 700;
-        text-align: left;
-        cursor: pointer;
-      }
-      .payment-option strong {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background: #422b20;
-        color: var(--brand-orange);
-      }
-      .checkout-summary {
-        padding: 16px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: #1e293b;
-      }
-      .checkout-summary h4 {
-        margin: 0 0 12px;
-        color: var(--ink);
-        font-size: 15px;
-      }
-      .summary-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 8px;
-        color: var(--muted);
-        font-size: 13px;
-      }
-      .summary-row strong {
-        color: var(--ink);
-      }
-      .checkout-embed {
-        width: 100%;
-        min-height: 160px;
-        margin-top: 16px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #131c2e;
-      }
-      .checkout-status {
-        margin-top: 12px;
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .signup-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 85;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background: rgba(15, 30, 32, 0.72);
-        padding: 24px;
-      }
-      .signup-modal.open {
-        display: flex;
-      }
-      .signup-panel {
-        width: min(520px, 100%);
-        padding: 24px;
-        border-radius: 14px;
-        background: #1e293b;
-        color: var(--ink);
-        box-shadow: 0 30px 52px rgba(0, 0, 0, 0.2);
-      }
-      .signup-panel h3 {
-        margin: 0 0 10px;
-        color: var(--ink);
-        font-size: 24px;
-      }
-      .signup-panel form {
-        display: grid;
-        gap: 12px;
-      }
-      .signup-panel input {
-        width: 100%;
-        min-height: 44px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        color: var(--ink);
-      }
-      .signup-panel .button {
-        width: 100%;
       }
       .footer {
         padding: 28px 0;
@@ -838,13 +696,13 @@
         background: #f97316 !important;
         color: #0f172a !important;
       }
-      .pricing-grid .pricing-trigger {
+      .pricing-grid .gumroad-button {
         border: 1px solid #f97316 !important;
         background: #f97316 !important;
         color: #0f172a !important;
         transition: background-color 150ms ease, filter 150ms ease;
       }
-      .pricing-grid .pricing-trigger:hover {
+      .pricing-grid .gumroad-button:hover {
         border-color: #ff9142 !important;
         background: #ff9142 !important;
         color: #0f172a !important;
@@ -976,8 +834,7 @@
         .pricing-grid,
         .how-grid,
         .trust-grid,
-        .trust-strip-inner,
-        .payment-layout {
+        .trust-strip-inner {
           grid-template-columns: minmax(0, 1fr) !important;
         }
         .hero-inner {
@@ -1096,7 +953,7 @@
                   <label for="workspaceWorkLocation">Work Location</label>
                   <input id="workspaceWorkLocation" type="text" value="Austin, Texas" placeholder="Enter work location" />
                 </div>
-                <button class="button button-orange" type="button" id="downloadWorkspacePdf">Download Print-Ready PDF</button>
+                <a class="button button-orange gumroad-button" id="downloadWorkspacePdf" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Download Print-Ready PDF</a>
               </div>
               <div class="workspace-preview" aria-live="polite">
                 <div class="preview-watermark">US-EVS</div>
@@ -1169,6 +1026,9 @@
 
       <section class="content-section">
         <div class="shell">
+          <div class="promo-banner">
+            Q4 Enterprise Allocation: Use code <strong>LIMITED100</strong> for 10% off monthly or <strong>FIRST100</strong> for 20% off yearly plans. <em>Limited to the first 100 redemptions.</em>
+          </div>
           <p class="section-kicker">PRICING</p>
           <h2 class="section-title">Simple public pricing for verification workflows.</h2>
           <div class="pricing-grid">
@@ -1180,7 +1040,7 @@
                 <li>PDF export for print or email</li>
                 <li>Reference number included</li>
               </ul>
-              <button class="button button-orange pricing-trigger" data-plan="Single-Use Verification" data-price="$4.99" type="button">Select plan</button>
+              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Select plan</a>
             </article>
             <article class="pricing-card featured">
               <h3>Recruiter Pro</h3>
@@ -1190,7 +1050,7 @@
                 <li>Recruiter and small-team workflows</li>
                 <li>Audit trail for active cases</li>
               </ul>
-              <button class="button button-orange pricing-trigger" data-plan="Recruiter Pro" data-price="$24.99/month" type="button">Select plan</button>
+              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/RecruiterPro" data-gumroad-single-product="true">Select plan</a>
             </article>
             <article class="pricing-card">
               <h3>Enterprise Vault</h3>
@@ -1200,7 +1060,7 @@
                 <li>Tracking, storage, and audit retention</li>
                 <li>Dedicated compliance controls</li>
               </ul>
-              <button class="button button-orange pricing-trigger" data-plan="Enterprise Vault" data-price="$269.99/year" type="button">Select plan</button>
+              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/EnterpriseVault" data-gumroad-single-product="true">Select plan</a>
             </article>
           </div>
         </div>
@@ -1230,7 +1090,7 @@
       <div class="shell footer-inner">
         <div class="footer-brand">
           <img src="/public/us-evs-mark.svg" alt="" />
-          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://www.us-evs.com">www.us-evs.com</a></small></div>
+          <div><strong>Employment Verification USA</strong><br /><small>US-EVS · US Employment Verification System · <a href="https://usevs.com">usevs.com</a></small></div>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
           <a href="/auth">Create a letter</a>
@@ -1249,45 +1109,6 @@
         </div>
       </div>
     </footer>
-
-    <div class="payment-modal" id="paymentModal" aria-hidden="true">
-      <div class="payment-modal-panel" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
-        <div class="payment-header">
-          <h3 id="paymentModalTitle">Lemon Squeezy checkout</h3>
-          <button class="close-modal" type="button" aria-label="Close payment modal">×</button>
-        </div>
-        <div class="payment-layout">
-          <div>
-            <div class="payment-methods" aria-label="Payment methods">
-              <button class="payment-option" type="button"><span>Apple Pay</span><strong></strong></button>
-              <button class="payment-option" type="button"><span>Google Pay</span><strong>G</strong></button>
-              <button class="payment-option" type="button"><span>Credit Card</span><strong>◈</strong></button>
-            </div>
-            <div class="checkout-embed" aria-label="Lemon Squeezy checkout area"></div>
-            <div class="checkout-status">Configure a Lemon Squeezy checkout URL to load secure payment here.</div>
-          </div>
-          <aside class="checkout-summary">
-            <h4>Order summary</h4>
-            <div class="summary-row"><span>Plan</span><strong id="summaryPlan">Single-Use Verification</strong></div>
-            <div class="summary-row"><span>Price</span><strong id="summaryPrice">$4.99</strong></div>
-            <div class="summary-row"><span>Delivery</span><strong>Instant PDF</strong></div>
-            <div class="summary-row"><span>Access</span><strong>Print-ready</strong></div>
-          </aside>
-        </div>
-      </div>
-    </div>
-
-    <div class="signup-modal" id="signupModal" aria-hidden="true">
-      <div class="signup-panel" role="dialog" aria-modal="true" aria-labelledby="signupModalTitle">
-        <h3 id="signupModalTitle">Create your account</h3>
-        <form>
-          <input type="text" name="name" placeholder="Full name" required />
-          <input type="email" name="email" placeholder="Work email" required />
-          <input type="password" name="password" placeholder="Create password" required />
-          <button class="button button-orange" type="submit">Continue to payment</button>
-        </form>
-      </div>
-    </div>
 
     <script>
       const workspaceFields = {
@@ -1316,60 +1137,6 @@
       Object.values(workspaceFields).forEach((input) => input.addEventListener('input', syncWorkspacePreview));
       syncWorkspacePreview();
 
-      const paymentModal = document.getElementById('paymentModal');
-      const signupModal = document.getElementById('signupModal');
-      const summaryPlan = document.getElementById('summaryPlan');
-      const summaryPrice = document.getElementById('summaryPrice');
-
-      function openPaymentModal(planName, priceText) {
-        summaryPlan.textContent = planName;
-        summaryPrice.textContent = priceText;
-        paymentModal.classList.add('open');
-        paymentModal.setAttribute('aria-hidden', 'false');
-      }
-
-      function closePaymentModal() {
-        paymentModal.classList.remove('open');
-        paymentModal.setAttribute('aria-hidden', 'true');
-      }
-
-      function openSignupModal(planName, priceText) {
-        summaryPlan.textContent = planName;
-        summaryPrice.textContent = priceText;
-        signupModal.classList.add('open');
-        signupModal.setAttribute('aria-hidden', 'false');
-      }
-
-      function closeSignupModal() {
-        signupModal.classList.remove('open');
-        signupModal.setAttribute('aria-hidden', 'true');
-      }
-
-      document.getElementById('downloadWorkspacePdf').addEventListener('click', () => {
-        openPaymentModal('Single-Use Verification', '$4.99');
-      });
-
-      document.querySelectorAll('.pricing-trigger').forEach((button) => {
-        button.addEventListener('click', () => {
-          openPaymentModal(button.dataset.plan, button.dataset.price);
-        });
-      });
-
-      document.querySelector('#paymentModal .close-modal').addEventListener('click', closePaymentModal);
-      document.querySelector('#signupModal .close-modal')?.addEventListener('click', closeSignupModal);
-
-      paymentModal.addEventListener('click', (event) => {
-        if (event.target === paymentModal) closePaymentModal();
-      });
-      signupModal.addEventListener('click', (event) => {
-        if (event.target === signupModal) closeSignupModal();
-      });
-
-      document.querySelector('#signupModal form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        closeSignupModal();
-        openPaymentModal(summaryPlan.textContent, summaryPrice.textContent);
-      });
     </script>
   </body>
 </html>
