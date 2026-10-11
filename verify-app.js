@@ -218,7 +218,6 @@
     form.elements.representativeEmail.value = officer.email || "";
     ["employerName", "employerAddress", "employerPhone", "employerEmail", "representativeName", "representativeTitle", "representativeEmail"]
       .forEach((name) => { form.elements[name].readOnly = true; });
-    document.getElementById("authNotice").hidden = true;
     updatePreview();
   }).catch((error) => {
     status.textContent = error.message;

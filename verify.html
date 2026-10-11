@@ -24,7 +24,8 @@
     .preview-card{position:sticky;top:16px;overflow:hidden}.preview-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--navy);color:white}.preview-head strong{font-size:13px}.preview-head button{display:none;min-height:44px;border:1px solid #9eabc0;border-radius:3px;padding:8px 12px;background:transparent;color:white}
     .paper{position:relative;min-height:640px;margin:16px;padding:38px 34px;border:1px solid #e2e5e9;background:white;color:#222;font:14px/1.7 Arial,sans-serif;box-shadow:0 5px 16px #17243a0d}.paper .paper-brand{padding-bottom:17px;border-bottom:2px solid var(--navy);text-align:center}.paper-brand strong{display:block;color:var(--navy);font-size:17px}.paper-brand span{color:#627087;font-size:11px}.paper h2{margin:20px 0;text-align:center;font-size:16px}.paper p{margin:12px 0}.paper .paper-meta{color:#5c6878;font-size:11px;text-align:center}.paper .seal{position:absolute;top:90px;right:30px;width:82px;height:82px;display:grid;place-items:center;border:2px double #64748b;border-radius:50%;color:#42536d;font-size:9px;font-weight:700;text-align:center;transform:rotate(12deg)}.paper .signature{margin-top:28px;color:#17243a}.paper .signature img{display:block;max-width:190px;max-height:70px;object-fit:contain}.paper .script{font:italic 26px cursive;color:#233b5d}.paper .qr{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:10px}.paper .qr img{width:68px;height:68px}.export-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 16px 16px}.export-actions button,.export-actions a{min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid var(--navy2);border-radius:4px;background:white;color:var(--navy2);font-weight:700;text-decoration:none;cursor:pointer}.export-actions button:disabled{opacity:.4;cursor:not-allowed}
     .paper .seal[hidden]{display:none}
-    .attachments-note{color:var(--muted);font-size:11px}.app-footer{padding:20px 28px;background:#fff}
+    .attachments-note{color:var(--muted);font-size:11px}.app-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;padding:20px 28px;background:#fff}.footer-text{display:grid;gap:6px;min-width:0;line-height:1.5}.footer-links{flex:0 0 auto;display:flex;gap:16px}.footer-links a{font-weight:700;text-decoration:none}
+    .form-column,.preview-card{min-width:0}.form-column .card{overflow:hidden}@media(max-width:600px){.app-footer{flex-direction:column}}
     @media(min-width:1280px){main{width:min(1440px,calc(100% - 64px))}.layout{gap:26px}.form-column{gap:18px}}
     @media(min-width:768px) and (max-width:1023px){main{width:calc(100% - 32px)}.layout{gap:16px}.paper{margin:12px;padding:28px 24px}}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.mobile-preview-trigger{display:block}.preview-card{position:fixed;z-index:10;inset:10vh 12px 12px;display:none;overflow:auto}.preview-card.open{display:block}.preview-head button{display:block}}
@@ -43,7 +44,6 @@
   </header>
   <main>
     <div class="heading"><div><h1>Create an employment verification letter</h1><p>Complete the verified employer and employee record. Preview updates as you work.</p></div><button type="button" class="mobile-preview-trigger" id="openPreviewTop">Preview letter</button><a href="/issuer">Employer sign-in</a></div>
-    <div class="notice" id="authNotice">Document issuance requires a verified HR sign-in. You can complete and preview the form first; sign in before generating. <a href="/issuer">Sign in to continue</a></div>
     <div class="layout">
       <form id="verifyForm" class="form-column" data-private data-hj-suppress data-fs-exclude>
         <div class="card">
@@ -142,6 +142,6 @@
       </aside>
     </div>
   </main>
-  <footer class="app-footer"><span>US-EVS - US Employment Verification System. All rights reserved.</span><a href="/">Home</a><span>us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.</span></footer>
+  <footer class="app-footer"><div class="footer-text"><span>US-EVS - US Employment Verification System. All rights reserved.</span><span>us-evs.com is an independent commercial software platform and is not affiliated with any local, state, or federal government agency.</span></div><nav class="footer-links" aria-label="Footer navigation"><a href="/">Home</a></nav></footer>
 </body>
 </html>
