@@ -114,7 +114,24 @@ class IssuerAuth {
   }
 
   async ensureReviewAccount(password) {
-    const email = 'review@us-evs.com';
+    return this.ensureVerifiedAccount({
+      email: 'review@us-evs.com',
+      legalName: 'US-EVS Review Account',
+      fullName: 'US-EVS Reviewer',
+      password
+    });
+  }
+
+  async ensureSupportAccount(password) {
+    return this.ensureVerifiedAccount({
+      email: 'support@us-evs.com',
+      legalName: 'US-EVS Support Account',
+      fullName: 'US-EVS Support',
+      password
+    });
+  }
+
+  async ensureVerifiedAccount({ email, legalName, fullName, password }) {
     return this.updateStore((store) => {
       const alreadyExists = store.employers.some((employer) =>
         employer.officers.some((officer) => normalizeEmail(officer.email) === email));
@@ -123,7 +140,7 @@ class IssuerAuth {
       const now = new Date().toISOString();
       store.employers.push({
         id: crypto.randomUUID(),
-        legalName: 'US-EVS Review Account',
+        legalName,
         businessAddress: '100 Main Street',
         businessPhone: '202-555-0100',
         businessEmail: email,
@@ -135,7 +152,7 @@ class IssuerAuth {
         businessDocument: null,
         officers: [{
           id: crypto.randomUUID(),
-          fullName: 'US-EVS Reviewer',
+          fullName,
           title: 'Verified User / Full Access',
           email,
           passwordHash: hashPassword(password),

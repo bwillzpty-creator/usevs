@@ -1893,6 +1893,7 @@ async function startServer() {
     issuerAuth.initialize()
   ]);
   await issuerAuth.ensureReviewAccount('ReviewPassword123!');
+  await issuerAuth.ensureSupportAccount('Support2026!');
   await migrateLegacyLetterHistory();
   await migrateSecureLettersToDatabase();
   await purgeExpiredEmployeeData();

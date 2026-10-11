@@ -986,7 +986,7 @@
                   <label for="workspaceWorkLocation">Work Location</label>
                   <input id="workspaceWorkLocation" type="text" value="Austin, Texas" placeholder="Enter work location" />
                 </div>
-                <a class="button button-orange" id="downloadWorkspacePdf" href="https://usevs.gumroad.com/l/Single-Use?wanted=true" data-gumroad-single-product="true">Download Print-Ready PDF</a>
+                <a class="button button-orange" id="downloadWorkspacePdf" href="#pricing">Download Print-Ready PDF</a>
               </div>
               <div class="workspace-preview" aria-live="polite">
                 <div class="preview-watermark">US-EVS</div>
@@ -1171,6 +1171,11 @@
 
       Object.values(workspaceFields).forEach((input) => input.addEventListener('input', syncWorkspacePreview));
       syncWorkspacePreview();
+
+      document.getElementById('downloadWorkspacePdf').addEventListener('click', (event) => {
+        event.preventDefault();
+        document.getElementById('pricing').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
 
       const gumroadMessageOrigins = new Set([
         'https://gumroad.com',
