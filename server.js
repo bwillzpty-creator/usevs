@@ -1185,7 +1185,7 @@ app.get('/landing', (req, res) => {
 
 app.get('/verify', (req, res) => res.sendFile(path.join(__dirname, 'verify.html')));
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
-app.get('/dashboard', requireIssuerSession, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/dashboard', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/lookup.js', (req, res) => res.sendFile(path.join(__dirname, 'lookup.js')));
 app.get('/dashboard.js', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.js')));
 app.get('/verify-app.js', (req, res) => res.sendFile(path.join(__dirname, 'verify-app.js')));
@@ -1905,5 +1905,5 @@ startServer().catch((error) => {
   process.exitCode = 1;
 });
 
-app.get('/create-letter', requireIssuerSession, (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
-app.get('/history', requireIssuerSession, (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
+app.get('/create-letter', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
+app.get('/history', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
