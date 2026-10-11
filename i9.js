@@ -11,7 +11,7 @@
   function displayDateToIso(value) {
     if (!value) return '';
     const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(value);
-    if (!match) throw new Error('Enter dates in DD/MM/YY format.');
+    if (!match) throw new Error('Enter dates in MM/DD/YYYY format.');
     const [, day, month, shortYear] = match;
     const shortYearNumber = Number(shortYear);
     const year = shortYearNumber >= 50 ? 1900 + shortYearNumber : 2000 + shortYearNumber;

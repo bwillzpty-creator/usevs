@@ -90,7 +90,7 @@
     if (displayDate) {
       const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayDate);
       if (!match) {
-        status.textContent = "Enter dates in DD/MM/YY format.";
+        status.textContent = "Enter dates in MM/DD/YYYY format.";
         return;
       }
       const [, dayText, monthText, yearText] = match;

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { evaluateStateRules, getReverificationThresholds, parseDmyy, validateDocumentChoice, validateRemoteProcedure } = require('../i9-rules');
 
-test('parses strict DD/MM/YY calendar dates with a documented two-digit-year pivot', () => {
+test('parses strict MM/DD/YYYY calendar dates with a documented two-digit-year pivot', () => {
   assert.equal(parseDmyy('31/12/49'), '2049-12-31');
   assert.equal(parseDmyy('01/01/50'), '1950-01-01');
   assert.throws(() => parseDmyy('31/02/24'), /valid calendar date/);

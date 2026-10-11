@@ -6,7 +6,7 @@ const US_STATES = new Set([
 
 function parseDmyy(value) {
   if (typeof value !== 'string' || !/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
-    throw new Error('Dates must use DD/MM/YY format.');
+    throw new Error('Dates must use MM/DD/YYYY format.');
   }
   const [day, month, shortYear] = value.split('/').map(Number);
   const year = shortYear >= 50 ? 1900 + shortYear : 2000 + shortYear;

@@ -19,7 +19,7 @@
   function toIsoDate(displayValue) {
     if (!displayValue) return '';
     const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayValue);
-    if (!match) throw new Error('Enter dates in DD/MM/YY format.');
+    if (!match) throw new Error('Enter dates in MM/DD/YYYY format.');
     const [, dayText, monthText, yearText] = match;
     const day = Number(dayText);
     const month = Number(monthText);

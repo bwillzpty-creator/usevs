@@ -3,7 +3,7 @@ let generatedLetter = "";
 function toIsoDate(displayValue) {
   if (!displayValue) return "";
   const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(displayValue);
-  if (!match) throw new Error("Enter dates in DD/MM/YY format.");
+  if (!match) throw new Error("Enter dates in MM/DD/YYYY format.");
   const [, day, month, shortYear] = match;
   const yearNumber = Number(shortYear);
   const year = yearNumber >= 50 ? 1900 + yearNumber : 2000 + yearNumber;
