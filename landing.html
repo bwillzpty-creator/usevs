@@ -707,6 +707,13 @@
         background: #ff9142 !important;
         color: #0f172a !important;
       }
+      /* Force hide any logo or brand text injected by gumroad.js */
+      .gumroad-button .gumroad-button-logo,
+      .gumroad-button svg,
+      a[data-gumroad-single-product] svg,
+      a[data-gumroad-single-product] .gumroad-button-logo {
+        display: none !important;
+      }
       .compliance-section .section-kicker {
         font-size: 9px;
       }
