@@ -301,8 +301,20 @@
       const result = await response.json();
       if (!response.ok) {
         if (response.status === 401) {
-          document.getElementById("authNotice").hidden = false;
-          throw new Error("Sign in with a verified HR account to issue this letter.");
+          window.location.href = result.redirectUrl || "/login";
+          return;
+        }
+        if (response.status === 402 || response.status === 402.1) {
+          if (window.PaymentClient && typeof window.PaymentClient.openCheckout === "function") {
+            window.PaymentClient.openCheckout({
+              onSuccess: () => {
+                status.textContent = "Payment successful! Resubmitting...";
+                form.requestSubmit();
+              }
+            });
+            return;
+          }
+          throw new Error(result.message || "Payment required to issue letter.");
         }
         throw new Error(result.message || "Unable to generate the verification letter.");
       }
