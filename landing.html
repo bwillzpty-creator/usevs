@@ -27,6 +27,14 @@
       * {
         box-sizing: border-box;
       }
+      html {
+        scroll-behavior: smooth;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
       body {
         margin: 0;
         background: var(--canvas);
@@ -770,9 +778,6 @@
           gap: 12px;
           font-size: 12px;
         }
-        .main-nav a:nth-child(3) {
-          display: none;
-        }
         .hero-inner {
           min-height: 0;
           grid-template-columns: 1fr;
@@ -895,6 +900,8 @@
         <nav class="main-nav" aria-label="Main navigation">
           <a href="/lookup">Verify a letter</a>
           <a href="/dashboard">Record history</a>
+          <a class="button button-outline" href="/login">Sign In</a>
+          <a class="button button-orange" href="#pricing">Get Started</a>
         </nav>
       </div>
     </header>
@@ -1050,7 +1057,7 @@
         </div>
       </section>
 
-      <section class="content-section">
+      <section class="content-section" id="pricing">
         <div class="shell">
           <div class="promo-banner">
             Q4 Enterprise Allocation: Use code <strong>LIMITED100</strong> for 10% off monthly or <strong>FIRST100</strong> for 20% off yearly plans. <em>Limited to the first 100 redemptions.</em>
