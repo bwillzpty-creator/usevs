@@ -2,10 +2,9 @@ const crypto = require('crypto');
 const fs = require('fs/promises');
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FREE_EMAIL_DOMAINS = new Set([
-  'gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-  'live.com', 'icloud.com', 'aol.com', 'proton.me', 'protonmail.com'
-]);
+const SUPPORT_EMAIL = 'support@us-evs.com';
+// Used only while no email transport is configured, so the support account can still sign in.
+const SUPPORT_STATIC_CODE = '000000';
 const SESSION_COOKIE = 'usevs_issuer_session';
 const SESSION_LIFETIME_MS = 8 * 60 * 60 * 1000;
 const CHALLENGE_LIFETIME_MS = 10 * 60 * 1000;
@@ -23,8 +22,7 @@ function getEmailDomain(value) {
 
 function isCorporateEmail(value) {
   const email = normalizeEmail(value);
-  const domain = getEmailDomain(email);
-  return email.length <= 254 && EMAIL_PATTERN.test(email) && !FREE_EMAIL_DOMAINS.has(domain);
+  return email.length <= 254 && EMAIL_PATTERN.test(email);
 }
 
 function digest(value) {
@@ -420,10 +418,11 @@ class IssuerAuth {
       throw new Error('Sign-in failed or employer authorization is incomplete.');
     }
 
-    const qaOnly = Boolean(this.qaOtpCode) && email === this.qaOtpEmail;
+    const supportFallback = !this.emailTransport && email === SUPPORT_EMAIL;
+    const qaOnly = supportFallback || (Boolean(this.qaOtpCode) && email === this.qaOtpEmail);
     if (!this.emailTransport && !qaOnly) throw new Error('One-time code delivery is not configured.');
 
-    const code = qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const code = supportFallback ? SUPPORT_STATIC_CODE : qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const challengeId = crypto.randomBytes(24).toString('base64url');
     if (!qaOnly) {
       await this.emailTransport.sendMail({

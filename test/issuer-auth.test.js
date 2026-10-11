@@ -56,7 +56,7 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
     businessEmail: 'owner@gmail.com',
     officerName: 'Alex Morgan',
     officerTitle: 'HR Director',
-    officerEmail: 'hr@gmail.com',
+    officerEmail: 'hr@yahoo.com',
     officerPassword: 'long-test-password-123'
   }, '127.0.0.1'), /matching corporate emails/);
 
@@ -125,4 +125,36 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
   const retained = auth.encryptRetainedSensitive('retained employee data');
   assert.equal(auth.decryptRetainedSensitive(retained), 'retained employee data');
   assert.equal(JSON.stringify(retained).includes('retained employee data'), false);
+});
+
+test('consumer email domains register, and support signs in with the static code only without email delivery', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-support-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const options = {
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailFrom: 'verification@example.test',
+    publicBaseUrl: 'https://verification.example.test',
+    reviewToken: '',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
+  };
+  const messages = [];
+  const mailed = new IssuerAuth({ ...options, emailTransport: { sendMail: async (message) => messages.push(message) } });
+  await mailed.initialize();
+  await mailed.registerEmployer({
+    legalBusinessName: 'Gmail Co', businessAddress: '1 Main St', businessPhone: '555-0100',
+    businessEmail: 'owner@gmail.com', officerName: 'Sam Lee', officerTitle: 'HR',
+    officerEmail: 'sam@gmail.com', officerPassword: 'long-test-password-123', ageConfirmed: true
+  }, '127.0.0.1');
+  assert.equal(messages.length, 1);
+
+  assert.equal(await mailed.ensureSupportAccount('Support2026!'), true);
+  await mailed.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.2');
+  assert.equal(messages.length, 2);
+
+  const unmailed = new IssuerAuth({ ...options, emailTransport: null });
+  const challenge = await unmailed.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.3');
+  const login = await unmailed.completeSignIn(challenge.challengeId, '000000');
+  const context = await unmailed.getSession({ headers: { cookie: `${SESSION_COOKIE}=${login.token}` } });
+  assert.equal(context.officer.email, 'support@us-evs.com');
 });
