@@ -696,16 +696,29 @@
         background: #f97316 !important;
         color: #0f172a !important;
       }
-      .pricing-grid .gumroad-button {
+      .pricing-grid .button {
         border: 1px solid #f97316 !important;
         background: #f97316 !important;
         color: #0f172a !important;
         transition: background-color 150ms ease, filter 150ms ease;
       }
-      .pricing-grid .gumroad-button:hover {
+      .pricing-grid .button:hover {
         border-color: #ff9142 !important;
         background: #ff9142 !important;
         color: #0f172a !important;
+      }
+      .compliance-section .section-kicker {
+        font-size: 9px;
+      }
+      .compliance-section .section-title {
+        max-width: 760px;
+        font-size: 30px;
+      }
+      .compliance-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
       }
       .button.button-outline {
         border-color: #f97316 !important;
@@ -826,6 +839,14 @@
         .footer-inner {
           align-items: flex-start;
           flex-direction: column;
+        }
+      }
+      @media (max-width: 700px) {
+        .compliance-grid {
+          grid-template-columns: 1fr;
+        }
+        .compliance-section .section-title {
+          font-size: 26px;
         }
       }
       @media (max-width: 1024px) {
@@ -953,7 +974,7 @@
                   <label for="workspaceWorkLocation">Work Location</label>
                   <input id="workspaceWorkLocation" type="text" value="Austin, Texas" placeholder="Enter work location" />
                 </div>
-                <a class="button button-orange gumroad-button" id="downloadWorkspacePdf" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Download Print-Ready PDF</a>
+                <a class="button button-orange" id="downloadWorkspacePdf" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Download Print-Ready PDF</a>
               </div>
               <div class="workspace-preview" aria-live="polite">
                 <div class="preview-watermark">US-EVS</div>
@@ -1040,7 +1061,7 @@
                 <li>PDF export for print or email</li>
                 <li>Reference number included</li>
               </ul>
-              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="https://usevs.gumroad.com/l/Single-Use" data-gumroad-single-product="true">Select plan</a>
             </article>
             <article class="pricing-card featured">
               <h3>Recruiter Pro</h3>
@@ -1050,7 +1071,7 @@
                 <li>Recruiter and small-team workflows</li>
                 <li>Audit trail for active cases</li>
               </ul>
-              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/RecruiterPro" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="https://usevs.gumroad.com/l/RecruiterPro" data-gumroad-single-product="true">Select plan</a>
             </article>
             <article class="pricing-card">
               <h3>Enterprise Vault</h3>
@@ -1060,28 +1081,30 @@
                 <li>Tracking, storage, and audit retention</li>
                 <li>Dedicated compliance controls</li>
               </ul>
-              <a class="gumroad-button button button-orange" href="https://usevs.gumroad.com/l/EnterpriseVault" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="https://usevs.gumroad.com/l/EnterpriseVault" data-gumroad-single-product="true">Select plan</a>
             </article>
           </div>
         </div>
       </section>
 
-      <section class="content-section" aria-labelledby="us-faq-title">
+      <section class="content-section compliance-section" aria-labelledby="us-faq-title">
         <div class="shell">
           <p class="section-kicker">US COMPLIANCE</p>
           <h2 class="section-title" id="us-faq-title">Questions about U.S. verification compliance</h2>
-          <article class="faq-item">
-            <h3>Does US-EVS prepare or submit Form I-9 records?</h3>
-            <p>No. US-EVS provides a secure workplace workflow for employer-side verification records, but the employer must still complete the official USCIS Form I-9 and related onboarding paperwork as required by the applicable federal and state rules.</p>
-          </article>
-          <article class="faq-item">
-            <h3>Can US-EVS automate E-Verify or right-to-work checks?</h3>
-            <p>US-EVS can support employer-side verification workflows, audit logging, and document retention for U.S. hiring checks, but it does not replace the employer's legal responsibility to follow current E-Verify, I-9, and local compliance requirements.</p>
-          </article>
-          <article class="faq-item">
-            <h3>Does a US-EVS reference confirm FCRA compliance or background check rules?</h3>
-            <p>No. A US-EVS reference confirms that a verification record exists in the platform. It does not certify compliance with the Fair Credit Reporting Act, state consumer-protection laws, or any employer's independent screening program.</p>
-          </article>
+          <div class="compliance-grid">
+            <article class="faq-item">
+              <h3>Does US-EVS prepare or submit Form I-9 records?</h3>
+              <p>No. US-EVS provides a secure workplace workflow for employer-side verification records, but the employer must still complete the official USCIS Form I-9 and related onboarding paperwork as required by the applicable federal and state rules.</p>
+            </article>
+            <article class="faq-item">
+              <h3>Can US-EVS automate E-Verify or right-to-work checks?</h3>
+              <p>US-EVS can support employer-side verification workflows, audit logging, and document retention for U.S. hiring checks, but it does not replace the employer's legal responsibility to follow current E-Verify, I-9, and local compliance requirements.</p>
+            </article>
+            <article class="faq-item">
+              <h3>Does a US-EVS reference confirm FCRA compliance or background check rules?</h3>
+              <p>No. A US-EVS reference confirms that a verification record exists in the platform. It does not certify compliance with the Fair Credit Reporting Act, state consumer-protection laws, or any employer's independent screening program.</p>
+            </article>
+          </div>
         </div>
       </section>
     </main>
