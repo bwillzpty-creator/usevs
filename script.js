@@ -25,11 +25,11 @@ if (issuerLogoutButton) {
       document.getElementById("issuerEmployerName").textContent = session.employer.legalName;
       document.getElementById("issuerOfficerName").textContent = `${session.officer.fullName} · ${session.officer.title}`;
     })
-    .catch(() => window.location.replace("/issuer"));
+    .catch(() => window.location.replace("/login"));
 
   issuerLogoutButton.addEventListener("click", async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-    window.location.replace("/issuer");
+    window.location.replace("/login");
   });
 }
 

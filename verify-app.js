@@ -202,8 +202,12 @@
   });
 
   fetch("/api/auth/session", { credentials: "same-origin" }).then(async (response) => {
-    if (!response.ok) return;
     const session = await response.json();
+    if (response.status === 401) {
+      window.location.replace(session.redirectUrl || "/login");
+      return;
+    }
+    if (!response.ok) throw new Error(session.message || "Unable to load issuer session.");
     const { employer, officer } = session;
     form.elements.employerName.value = employer.legalName || "";
     form.elements.employerAddress.value = employer.businessAddress || "";
@@ -216,7 +220,9 @@
       .forEach((name) => { form.elements[name].readOnly = true; });
     document.getElementById("authNotice").hidden = true;
     updatePreview();
-  }).catch(() => {});
+  }).catch((error) => {
+    status.textContent = error.message;
+  });
 
   function readFile(file) {
     return new Promise((resolve, reject) => {
@@ -232,6 +238,10 @@
     const response = await fetch(`/api/letters/${encodeURIComponent(currentReference)}/export?format=${format}`, { credentials: "same-origin" });
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        window.location.replace(result.redirectUrl || "/login");
+        return;
+      }
       throw new Error(result.message || "Unable to download this document.");
     }
     const url = URL.createObjectURL(await response.blob());
@@ -253,6 +263,10 @@
         body: JSON.stringify({ recipientEmail: sendTo })
       });
       const result = await response.json();
+      if (response.status === 401) {
+        window.location.replace(result.redirectUrl || "/login");
+        return;
+      }
       if (!response.ok) throw new Error(result.message || "Unable to send this document.");
       status.textContent = result.message;
     } catch (error) { status.textContent = error.message; }

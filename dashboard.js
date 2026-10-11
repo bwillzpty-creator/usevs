@@ -5,6 +5,12 @@
   const dialog = document.getElementById("letterDialog");
   let records = [];
 
+  function redirectIfUnauthorized(response, result) {
+    if (response.status !== 401) return false;
+    window.location.replace(result.redirectUrl || "/login");
+    return true;
+  }
+
   function addCell(row, text, className) {
     const cell = document.createElement("td");
     cell.textContent = text || "—";
@@ -16,6 +22,7 @@
     const response = await fetch(`/api/letters/${encodeURIComponent(reference)}/export?format=${format}`, { credentials: "same-origin" });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
+      if (redirectIfUnauthorized(response, body)) return;
       throw new Error(body.message || "Unable to download this letter.");
     }
     const url = URL.createObjectURL(await response.blob());
@@ -33,6 +40,7 @@
       body: JSON.stringify({ recipientEmail })
     });
     const result = await response.json();
+    if (redirectIfUnauthorized(response, result)) return;
     if (!response.ok) throw new Error(result.message || "Unable to send this letter.");
     status.textContent = result.message;
   }
@@ -106,7 +114,7 @@
     try {
       const response = await fetch(`/api/letters?${params}`, { credentials: "same-origin" });
       const result = await response.json();
-      if (response.status === 401) document.getElementById("authNotice").hidden = false;
+      if (redirectIfUnauthorized(response, result)) return;
       if (!response.ok) throw new Error(result.message || "Unable to load records.");
       records = result.records;
       render();

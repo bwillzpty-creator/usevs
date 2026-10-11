@@ -24,7 +24,11 @@
 
   async function requestJson(url, options = {}) {
     const response = await fetch(url, { credentials: 'same-origin', ...options });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      window.location.replace(result.redirectUrl || '/login');
+      throw new Error(result.message || 'Sign-in required.');
+    }
     if (!response.ok) throw new Error(result.message || 'The request could not be completed.');
     return result;
   }
@@ -162,5 +166,7 @@
     }
   });
 
-  requestJson('/api/auth/session').then(loadRecords).catch(() => window.location.replace('/auth'));
+  requestJson('/api/auth/session').then(loadRecords).catch((error) => {
+    recordsStatus.textContent = error.message;
+  });
 })();

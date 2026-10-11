@@ -1,0 +1,105 @@
+(() => {
+  async function postJson(url, body) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || 'The request could not be completed.');
+    return result;
+  }
+
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    const otpForm = document.getElementById('otpForm');
+    const loginStatus = document.getElementById('loginStatus');
+    const otpStatus = document.getElementById('otpStatus');
+    let challengeId = '';
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = loginForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      loginStatus.textContent = 'Verifying sign-in details…';
+      try {
+        const result = await postJson('/api/auth/login', {
+          email: loginForm.elements.email.value,
+          password: loginForm.elements.password.value
+        });
+        challengeId = result.challengeId;
+        otpForm.hidden = false;
+        otpStatus.textContent = result.message || 'Enter the one-time code sent to your corporate email.';
+        document.getElementById('loginCode').focus();
+      } catch (error) {
+        loginStatus.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    otpForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = otpForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      otpStatus.textContent = 'Verifying one-time code…';
+      try {
+        const result = await postJson('/api/auth/otp', {
+          challengeId,
+          code: otpForm.elements.code.value
+        });
+        const next = new URLSearchParams(window.location.search).get('next');
+        let redirectTo = result.redirectTo || '/verify';
+        if (next && next.startsWith('/') && !next.startsWith('//')) {
+          const candidate = new URL(next, window.location.origin);
+          if (candidate.origin === window.location.origin && candidate.pathname !== '/login' && candidate.pathname !== '/auth') {
+            redirectTo = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+          }
+        }
+        window.location.assign(redirectTo);
+      } catch (error) {
+        otpStatus.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  const registrationForm = document.getElementById('employerForm');
+  if (registrationForm) {
+    const status = document.getElementById('registrationStatus');
+    registrationForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = registrationForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      status.textContent = 'Submitting employer registration…';
+      try {
+        const data = Object.fromEntries(new FormData(registrationForm).entries());
+        const documentFile = registrationForm.elements.businessDocument.files[0];
+        if (documentFile && documentFile.size > 5 * 1024 * 1024) {
+          throw new Error('The business document must be 5 MB or smaller.');
+        }
+        if (documentFile) {
+          data.businessDocument = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Unable to read the business document.'));
+            reader.readAsDataURL(documentFile);
+          });
+        } else {
+          data.businessDocument = '';
+        }
+        data.ageConfirmed = registrationForm.elements.ageConfirmed.checked;
+        data.contentLiabilityAccepted = registrationForm.elements.contentLiabilityAccepted.checked;
+        const result = await postJson('/api/employers', data);
+        status.textContent = result.message;
+        registrationForm.reset();
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+})();

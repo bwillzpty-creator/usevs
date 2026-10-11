@@ -535,9 +535,13 @@ function clearIssuerSessionCookie(res) {
 async function requireIssuerSession(req, res, next) {
   try {
     if (!isSameOriginRequest(req)) return res.status(403).json({ success: false, message: 'Cross-origin requests are not allowed.' });
-    req.issuerContext = await issuerAuth.getSession(req);
-    if (!req.issuerContext) return res.status(401).json({ success: false, message: 'Verified HR sign-in is required.' });
     res.setHeader('Cache-Control', 'no-store');
+    req.issuerContext = await issuerAuth.getSession(req);
+    if (!req.issuerContext) return res.status(401).json({
+      success: false,
+      message: 'Verified HR sign-in is required.',
+      redirectUrl: '/login'
+    });
     return next();
   } catch (error) {
     console.error('Unable to validate HR session:', error);
@@ -558,13 +562,6 @@ async function requireIssuerPage(req, res, next) {
     console.error('Unable to validate protected page session:', error);
     return res.status(503).send('Employer sign-in is temporarily unavailable.');
   }
-}
-
-function requireSignin(req, res, next) {
-  if (!req.session || !req.session.user) {
-    return res.status(401).json({ success: false, message: "Authentication required." });
-  }
-  next();
 }
 
 function isValidReviewer(req) {
@@ -646,8 +643,8 @@ async function processI9ExpirationAlerts() {
 app.get('/i9', async (req, res) => {
   try {
     const session = await issuerAuth.getSession(req);
-    if (!session) return res.redirect('/auth');
     res.setHeader('Cache-Control', 'no-store');
+    if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
     return res.sendFile(path.join(__dirname, 'i9.html'));
   } catch (error) {
     console.error('Unable to validate I-9 workspace session:', error);
@@ -1043,13 +1040,17 @@ app.get('/index.html', async (req, res) => {
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'issuer.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'employer-registration.html')));
-app.get('/issuer', (req, res) => res.redirect('/auth'));
+app.get('/issuer', (req, res) => res.redirect('/login'));
 
 app.get('/api/auth/session', async (req, res) => {
   try {
     const context = await issuerAuth.getSession(req);
-    if (!context) return res.status(401).json({ success: false, message: 'Sign-in required.' });
     res.setHeader('Cache-Control', 'no-store');
+    if (!context) return res.status(401).json({
+      success: false,
+      message: 'Sign-in required.',
+      redirectUrl: '/login'
+    });
     return res.json({ success: true, ...context });
   } catch (error) {
     console.error('Unable to load issuer session:', error);
@@ -1176,7 +1177,7 @@ app.use('/api/review', (req, res, next) => {
 });
 
 app.use('/public', express.static(path.join(__dirname, 'public'), { dotfiles: 'deny' }));
-app.get('/issuer.js', (req, res) => res.sendFile(path.join(__dirname, 'issuer.js')));
+app.get('/auth-client.js', (req, res) => res.sendFile(path.join(__dirname, 'auth-client.js')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js')));
 app.get('/payment-client.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-client.js')));
 app.get('/letter-pdf.js', (req, res) => res.sendFile(path.join(__dirname, 'letter-pdf.js')));
@@ -1190,7 +1191,7 @@ app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
-app.get('/verify', requireSignin, (req, res) =>
+app.get('/verify', requireIssuerPage, (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'verify.html'))
 );
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
@@ -1595,7 +1596,8 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, async (req
 
 app.post('/verify', (req, res) => res.status(401).json({
   success: false,
-  message: 'Public letter generation is disabled. Verified HR sign-in is required.'
+  message: 'Public letter generation is disabled. Verified HR sign-in is required.',
+  redirectUrl: '/login'
 }));
 
 app.post('/api/letters', requireIssuerSession, async (req, res) => {
