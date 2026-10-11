@@ -31,89 +31,94 @@ const otpForm = document.getElementById('otpForm');
 const loginStatus = document.getElementById('loginStatus');
 const otpStatus = document.getElementById('otpStatus');
 
-loginForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const button = loginForm.querySelector('button[type="submit"]');
-  button.disabled = true;
-  showMessage(loginStatus, 'Checking employer and signatory authorization...');
-  try {
-    const result = await requestJson('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: loginForm.elements.email.value,
-        password: loginForm.elements.password.value
-      })
-    });
-    loginChallengeId = result.challengeId;
-    otpForm.hidden = false;
-    showMessage(loginStatus, result.message);
-    document.getElementById('loginCode').focus();
-  } catch (error) {
-    showMessage(loginStatus, error.message, true);
-  } finally {
-    button.disabled = false;
-  }
-});
-
-otpForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const button = otpForm.querySelector('button[type="submit"]');
-  button.disabled = true;
-  showMessage(otpStatus, 'Verifying signatory code...');
-  try {
-    const result = await requestJson('/api/auth/otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challengeId: loginChallengeId, code: otpForm.elements.code.value })
-    });
-    window.location.assign(result.redirectTo || '/verify');
-  } catch (error) {
-    showMessage(otpStatus, error.message, true);
-    otpForm.elements.code.value = '';
-    otpForm.elements.code.focus();
-  } finally {
-    button.disabled = false;
-  }
-});
-
-document.getElementById('employerForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const button = form.querySelector('button[type="submit"]');
-  const status = document.getElementById('registrationStatus');
-  button.disabled = true;
-  showMessage(status, 'Creating the pending employer account...');
-  try {
-    const businessDocument = await readBusinessDocument(form.elements.businessDocument.files[0]);
-    if (businessDocument && !form.elements.contentLiabilityAccepted.checked) {
-      throw new Error('Accept responsibility for the uploaded document before continuing.');
+if (loginForm && otpForm) {
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = loginForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    showMessage(loginStatus, 'Checking employer and signatory authorization...');
+    try {
+      const result = await requestJson('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginForm.elements.email.value,
+          password: loginForm.elements.password.value
+        })
+      });
+      loginChallengeId = result.challengeId;
+      otpForm.hidden = false;
+      showMessage(loginStatus, result.message);
+      document.getElementById('loginCode').focus();
+    } catch (error) {
+      showMessage(loginStatus, error.message, true);
+    } finally {
+      button.disabled = false;
     }
-    const result = await requestJson('/api/employers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        legalBusinessName: form.elements.legalBusinessName.value,
-        businessAddress: form.elements.businessAddress.value,
-        businessPhone: form.elements.businessPhone.value,
-        businessEmail: form.elements.businessEmail.value,
-        officerName: form.elements.officerName.value,
-        officerTitle: form.elements.officerTitle.value,
-        officerEmail: form.elements.officerEmail.value,
-        officerPassword: form.elements.officerPassword.value,
-        businessDocument,
-        ageConfirmed: form.elements.ageConfirmed.checked,
-        contentLiabilityAccepted: form.elements.contentLiabilityAccepted.checked
-      })
-    });
-    form.reset();
-    showMessage(status, result.message);
-  } catch (error) {
-    showMessage(status, error.message, true);
-  } finally {
-    button.disabled = false;
-  }
-});
+  });
+
+  otpForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = otpForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    showMessage(otpStatus, 'Verifying signatory code...');
+    try {
+      const result = await requestJson('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId: loginChallengeId, code: otpForm.elements.code.value })
+      });
+      window.location.assign(result.redirectTo || '/verify');
+    } catch (error) {
+      showMessage(otpStatus, error.message, true);
+      otpForm.elements.code.value = '';
+      otpForm.elements.code.focus();
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+const employerForm = document.getElementById('employerForm');
+if (employerForm) {
+  employerForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    const status = document.getElementById('registrationStatus');
+    button.disabled = true;
+    showMessage(status, 'Creating the pending employer account...');
+    try {
+      const businessDocument = await readBusinessDocument(form.elements.businessDocument.files[0]);
+      if (businessDocument && !form.elements.contentLiabilityAccepted.checked) {
+        throw new Error('Accept responsibility for the uploaded document before continuing.');
+      }
+      const result = await requestJson('/api/employers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          legalBusinessName: form.elements.legalBusinessName.value,
+          businessAddress: form.elements.businessAddress.value,
+          businessPhone: form.elements.businessPhone.value,
+          businessEmail: form.elements.businessEmail.value,
+          officerName: form.elements.officerName.value,
+          officerTitle: form.elements.officerTitle.value,
+          officerEmail: form.elements.officerEmail.value,
+          officerPassword: form.elements.officerPassword.value,
+          businessDocument,
+          ageConfirmed: form.elements.ageConfirmed.checked,
+          contentLiabilityAccepted: form.elements.contentLiabilityAccepted.checked
+        })
+      });
+      form.reset();
+      showMessage(status, result.message);
+    } catch (error) {
+      showMessage(status, error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
 
 requestJson('/api/auth/session').then(() => {
   window.location.replace('/verify');
