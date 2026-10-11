@@ -1113,6 +1113,26 @@ app.post('/api/auth/logout', requireIssuerSession, (req, res) => {
   return res.json({ success: true });
 });
 
+app.get('/account', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
+app.get('/account.js', (req, res) => res.sendFile(path.join(__dirname, 'account.js')));
+
+app.get('/api/account/profile', requireIssuerSession, async (req, res) => {
+  try {
+    return res.json({ success: true, profile: await issuerAuth.getProfile(req.issuerContext) });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/api/account/profile', requireIssuerSession, async (req, res) => {
+  try {
+    const profile = await issuerAuth.updateProfile(req.issuerContext, req.body || {});
+    return res.json({ success: true, profile, message: 'Profile saved.' });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/employers/officers', requireIssuerSession, async (req, res) => {
   try {
     const officer = await issuerAuth.addOfficer(req.issuerContext, req.body || {});

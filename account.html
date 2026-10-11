@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Account Profile | US-EVS</title>
+  <link rel="stylesheet" href="/public/brand.css">
+  <style>
+    :root{--ink:#f8fafc;--muted:#cbd5e1;--line:#334155;--paper:#1e293b;--canvas:#131c2e;--navy:#131c2e;--accent:#f97316}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:15px "Source Sans 3",Arial,sans-serif!important}
+    header{min-height:68px;padding:10px max(20px,calc((100vw - 1280px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--navy);color:#fff}
+    header a{color:#fff;text-decoration:none}.brand{display:flex;align-items:center;gap:10px}.brand img{width:36px}.brand small{display:block;color:#cad4e2;font-size:11px}
+    nav{display:flex;gap:18px}nav a[aria-current=page]{color:#ffb17d}
+    main{width:min(820px,calc(100% - 36px));margin:28px auto 60px}h1{margin:0 0 6px;color:var(--ink)!important;font-size:27px}.lead{margin:0 0 20px;color:var(--muted)!important}
+    .panel{margin-bottom:18px;padding:24px;border:1px solid var(--line);background:var(--paper)}.panel h2{margin:0 0 14px;color:var(--ink)!important;font-size:18px}
+    form{display:grid;gap:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field{display:grid;align-content:start;gap:6px;min-width:0}.wide{grid-column:1/-1}
+    label{font-weight:700;font-size:13px;color:#e2e8f0!important}.hint{color:#e2e8f0;font-size:12px}
+    input{width:100%;min-height:42px;padding:9px 10px;border:1px solid #bac6d5;border-radius:3px;background:#fff;color:#1a202c;font:inherit}input[readonly]{background:#e2e8f0;color:#334155}
+    .actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:12px 24px;border:0;border-radius:3px;background:var(--accent);color:#ffffff!important;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}.button:hover,.button:focus-visible{background:#ea580c;color:#ffffff!important}.button.secondary{border:1px solid #94a3b8;background:transparent;color:#f7fafc!important}.button.secondary:hover{background:#334155}.button:disabled{opacity:.5;cursor:not-allowed}
+    #status{margin:0;color:#e2e8f0!important}#status.error{color:#fecaca!important}#status.good{color:#86efac!important}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}.panel{padding:16px}header{flex-wrap:wrap}}
+  </style>
+  <script src="/account.js" defer></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>Employer verification tools</small></span></a>
+    <nav aria-label="Application navigation"><a href="/verify">Letters</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a><a href="/account" aria-current="page">Account</a></nav>
+  </header>
+  <main>
+    <h1>Account profile</h1>
+    <p class="lead">Review and update your organization's information. Signed in as <strong id="signedInAs">...</strong>.</p>
+    <section class="panel" aria-labelledby="profileHeading">
+      <h2 id="profileHeading">Business and signatory details</h2>
+      <form id="profileForm" novalidate>
+        <div class="grid">
+          <div class="field wide"><label for="legalName">Legal business name</label><input id="legalName" name="legalName" maxlength="200" required autocomplete="organization"></div>
+          <div class="field wide"><label for="businessAddress">Business address</label><input id="businessAddress" name="businessAddress" maxlength="300" required autocomplete="street-address"></div>
+          <div class="field"><label for="taxId">EIN / Tax ID</label><input id="taxId" name="taxId" placeholder="12-3456789" inputmode="numeric" autocomplete="off"><span class="hint">Stored encrypted. Optional.</span></div>
+          <div class="field"><label for="businessPhone">Phone number</label><input id="businessPhone" name="businessPhone" type="tel" maxlength="30" required autocomplete="tel"></div>
+          <div class="field wide"><label for="businessEmail">HR / Payroll email</label><input id="businessEmail" name="businessEmail" type="email" maxlength="254" required autocomplete="email"></div>
+          <div class="field"><label for="signatoryName">Authorized signatory name</label><input id="signatoryName" name="signatoryName" maxlength="160" required autocomplete="name"></div>
+          <div class="field"><label for="signatoryTitle">Signatory title</label><input id="signatoryTitle" name="signatoryTitle" maxlength="120" required autocomplete="organization-title"></div>
+          <div class="field wide"><label for="signatoryEmail">Sign-in email</label><input id="signatoryEmail" readonly><span class="hint">The sign-in email cannot be changed here.</span></div>
+        </div>
+        <div class="actions"><button class="button" id="saveProfile" type="submit">Save profile</button><button class="button secondary" id="signOut" type="button">Sign out</button><p id="status" role="status" aria-live="polite"></p></div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

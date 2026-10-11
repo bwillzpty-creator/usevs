@@ -158,3 +158,29 @@ test('consumer email domains register, and support signs in with the static code
   const context = await unmailed.getSession({ headers: { cookie: `${SESSION_COOKIE}=${login.token}` } });
   assert.equal(context.officer.email, 'support@us-evs.com');
 });
+
+test('profile updates persist and encrypt the EIN', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-profile-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: null,
+    emailFrom: '',
+    publicBaseUrl: '',
+    reviewToken: '',
+    businessPostalAddress: ''
+  });
+  await auth.initialize();
+  await auth.ensureSupportAccount('Support2026!');
+  const store = await auth.readStore();
+  const context = { employer: { id: store.employers[0].id }, officer: { id: store.employers[0].officers[0].id } };
+  const saved = await auth.updateProfile(context, {
+    legalName: 'Acme LLC', businessAddress: '1 Main St', taxId: '12-3456789', businessEmail: 'hr@acme.test',
+    businessPhone: '202-555-0111', signatoryName: 'Jane Doe', signatoryTitle: 'HR Director'
+  });
+  assert.equal(saved.taxId, '12-3456789');
+  assert.equal((await auth.getProfile(context)).legalName, 'Acme LLC');
+  assert.doesNotMatch(await fs.readFile(path.join(directory, 'issuer_accounts.json'), 'utf8'), /12-3456789/);
+  await assert.rejects(auth.updateProfile(context, { legalName: 'x' }), /Provide a valid/);
+});

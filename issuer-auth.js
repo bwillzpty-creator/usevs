@@ -376,6 +376,60 @@ class IssuerAuth {
     });
   }
 
+  readProfile(employer, officer) {
+    let taxId = '';
+    if (employer.taxId && this.encryptionKey) {
+      try { taxId = this.decryptSensitive(employer.taxId); } catch { taxId = ''; }
+    }
+    return {
+      legalName: employer.legalName,
+      businessAddress: employer.businessAddress,
+      taxId,
+      businessEmail: employer.businessEmail,
+      businessPhone: employer.businessPhone,
+      signatoryName: officer.fullName,
+      signatoryTitle: officer.title,
+      signatoryEmail: officer.email
+    };
+  }
+
+  async getProfile(context) {
+    const store = await this.readStore();
+    const employer = store.employers.find((entry) => entry.id === context.employer.id);
+    const officer = employer?.officers.find((entry) => entry.id === context.officer.id);
+    if (!employer || !officer) throw new Error('Verified employer account required.');
+    return this.readProfile(employer, officer);
+  }
+
+  async updateProfile(context, input) {
+    const text = (value) => (typeof value === 'string' ? value.trim() : '');
+    const legalName = text(input.legalName);
+    const businessAddress = text(input.businessAddress);
+    const taxId = text(input.taxId);
+    const businessEmail = normalizeEmail(input.businessEmail);
+    const businessPhone = text(input.businessPhone);
+    const signatoryName = text(input.signatoryName);
+    const signatoryTitle = text(input.signatoryTitle);
+    if (!legalName || legalName.length > 200 || !businessAddress || businessAddress.length > 300 ||
+      !isCorporateEmail(businessEmail) || !/^[+()\d .-]{7,30}$/.test(businessPhone) ||
+      !signatoryName || signatoryName.length > 160 || !signatoryTitle || signatoryTitle.length > 120) {
+      throw new Error('Provide a valid business name, address, HR email, phone number, signatory name, and title.');
+    }
+    if (taxId && !/^\d{2}-?\d{7}$/.test(taxId)) throw new Error('EIN / Tax ID must use the format 12-3456789.');
+    if (taxId && !this.encryptionKey) throw new Error('Secure storage for the EIN is not configured.');
+    const encryptedTaxId = taxId ? this.encryptSensitive(taxId) : null;
+    return this.updateStore((store) => {
+      const employer = store.employers.find((entry) => entry.id === context.employer.id && entry.status === 'verified');
+      const officer = employer?.officers.find((entry) => entry.id === context.officer.id && entry.active);
+      if (!employer || !officer) throw new Error('Verified employer account required.');
+      Object.assign(employer, { legalName, businessAddress, businessEmail, businessPhone, profileUpdatedAt: new Date().toISOString() });
+      if (encryptedTaxId) employer.taxId = encryptedTaxId; else delete employer.taxId;
+      officer.fullName = signatoryName;
+      officer.title = signatoryTitle;
+      return this.readProfile(employer, officer);
+    });
+  }
+
   async beginSignIn(emailValue, password, remoteAddress) {
     const email = normalizeEmail(emailValue);
     const now = Date.now();
