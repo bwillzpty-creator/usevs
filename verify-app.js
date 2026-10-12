@@ -317,7 +317,13 @@
           return;
         }
         if (response.status === 402) {
-          window.location.href = result.redirectUrl || "/select-plan?required=1";
+          status.textContent = result.message || "You have no letter credits remaining. ";
+          const upgrade = document.createElement("a");
+          upgrade.href = "/select-plan?required=1";
+          upgrade.textContent = "Upgrade";
+          upgrade.className = "button";
+          upgrade.style.cssText = "display:inline-block;margin-left:10px;padding:8px 14px;background:#e8590c;color:#fff;border-radius:6px;font-weight:700;text-decoration:none";
+          status.appendChild(upgrade);
           return;
         }
         throw new Error(result.message || "Unable to generate the verification letter.");
