@@ -37,14 +37,14 @@
     const lifecycle = value("lifecycle", "Current Employee");
     const former = lifecycle === "Former Employee";
     const compensationRedacted = document.getElementById("redactCompensation").checked;
-    const startDate = value("startDate", "the start date");
+    const startDate = value("startDate", "[START DATE]");
     const endDate = value("endDate", "");
-    const pay = compensationRedacted ? "[REDACTED]" : value("basePay", "the base pay rate");
-    const ytd = compensationRedacted ? "[REDACTED]" : value("ytdGross", "the YTD earnings");
-    const bonus = compensationRedacted ? "[REDACTED]" : value("bonus", "the bonus amount");
+    const pay = compensationRedacted ? "[REDACTED]" : value("basePay", "[BASE PAY RATE]");
+    const ytd = compensationRedacted ? "[REDACTED]" : value("ytdGross", "[YTD GROSS EARNINGS]");
+    const bonus = compensationRedacted ? "[REDACTED]" : value("bonus", "[BONUS AMOUNT]");
     const hours = value("averageHours", "the average hours");
-    const department = value("department", "the department");
-    const jobTitle = value("jobTitle", "the job title");
+    const department = value("department", "[DEPARTMENT]");
+    const jobTitle = value("jobTitle", "[JOB TITLE]");
     const workStatus = value("workStatus", "work status");
     const purpose = value("purpose", "verification");
     const representative = value("representativeName", "the representative");
@@ -85,8 +85,8 @@
     setText("paragraphThree", paragraphs[2]);
     setText("previewMeta", currentReference ? `Document ID: ${currentReference} · ${new Date().toLocaleDateString()}` : "Document ID assigned at issuance");
     document.getElementById("sealPreview").hidden = !document.getElementById("corporateSeal").checked;
-    setText("previewRepresentative", representative);
-    setText("previewTitle", value("representativeTitle", "Representative title"));
+    setText("previewRepresentative", value("representativeName", "[AUTHORIZED SIGNATORY NAME]"));
+    setText("previewTitle", value("representativeTitle", "[TITLE]"));
     setText("disclaimerPreview", document.getElementById("liabilityDisclaimer").checked
       ? "Information provided reflects company records at the time of issuance and does not constitute a guarantee of future employment or compensation."
       : "");
