@@ -197,17 +197,10 @@
         data.contentLiabilityAccepted = registrationForm.elements.contentLiabilityAccepted.checked;
         const result = await postJson('/api/employers', data);
         status.textContent = result.message;
-        const checkoutLinks = {
-          single: 'https://usevs.gumroad.com/l/Single-Use',
-          monthly: 'https://usevs.gumroad.com/l/RecruiterPro',
-          yearly: 'https://usevs.gumroad.com/l/EnterpriseVault'
-        };
-        const plan = new URLSearchParams(window.location.search).get('plan');
-        const checkoutUrl = Object.prototype.hasOwnProperty.call(checkoutLinks, plan)
-          ? `${checkoutLinks[plan]}?wanted=true&email=${encodeURIComponent(data.officerEmail || data.businessEmail || '')}`
-          : '/select-plan';
         registrationForm.reset();
-        setTimeout(() => { window.location.href = checkoutUrl; }, 1500);
+        const plan = new URLSearchParams(window.location.search).get('plan');
+        const target = ['single', 'monthly', 'yearly'].includes(plan) ? `/select-plan?plan=${plan}` : '/select-plan';
+        setTimeout(() => { window.location.href = target; }, 1500);
       } catch (error) {
         status.textContent = error.message;
       } finally {

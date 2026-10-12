@@ -15,6 +15,7 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 32px; text-align: left; }
     .card { background: #fff; border: 1px solid #d8deea; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; }
     .card.featured { border-color: #e8590c; box-shadow: 0 6px 20px rgba(232, 89, 12, .15); }
+    .card.chosen { border-color: #14213d; box-shadow: 0 0 0 3px #14213d; }
     .card h2 { margin: 0 0 8px; font-size: 1.2rem; }
     .price strong { font-size: 2rem; }
     .price span { margin-left: 6px; color: #5c6b85; }
@@ -28,7 +29,7 @@
     <div class="banner" id="gateBanner" role="alert">An active plan or letter credit is required to access workspace tools.</div>
     <h1>Choose a plan to activate your account and access the workspace.</h1>
     <div class="grid">
-      <article class="card">
+      <article class="card" data-plan="single">
         <h2>Single Verification</h2>
         <div class="price"><strong>$4.99</strong><span>one-time</span></div>
         <ul>
@@ -38,7 +39,7 @@
         </ul>
         <a class="button" href="https://usevs.gumroad.com/l/Single-Use?wanted=true" data-gumroad-single-product="true">Select plan</a>
       </article>
-      <article class="card featured">
+      <article class="card featured" data-plan="monthly">
         <h2>Monthly</h2>
         <div class="price"><strong>$24.99</strong><span>per month</span></div>
         <ul>
@@ -48,7 +49,7 @@
         </ul>
         <a class="button" href="https://usevs.gumroad.com/l/RecruiterPro?wanted=true" data-gumroad-single-product="true">Select plan</a>
       </article>
-      <article class="card">
+      <article class="card" data-plan="yearly">
         <h2>Yearly</h2>
         <div class="price"><strong>$269.99</strong><span>per year</span></div>
         <ul>
@@ -62,6 +63,12 @@
     <p class="note">Use the same email address as your account at checkout. Access activates as soon as payment is confirmed.</p>
   </main>
   <script>
+    const chosenPlan = new URLSearchParams(location.search).get('plan');
+    const chosenCard = chosenPlan && document.querySelector(`.card[data-plan="${CSS.escape(chosenPlan)}"]`);
+    if (chosenCard) {
+      chosenCard.classList.add('chosen');
+      chosenCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     if (new URLSearchParams(location.search).get('required') === '1') {
       document.getElementById('gateBanner').classList.add('show');
     }

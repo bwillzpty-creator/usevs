@@ -27,7 +27,7 @@
   <script src="/dashboard.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard" aria-current="page">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/login" data-signout>Sign out</a></nav></header>
+  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard" aria-current="page">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/select-plan">Upgrade / Add credit</a><a href="/login" data-signout>Sign out</a></nav></header>
   <main>
     <div id="paymentBanner" class="notice" role="status" hidden style="background:#e5f3ea;border-color:#b8dcc5;color:#286440"><strong>Payment successful!</strong> Your workspace is active and credits have been credited.</div>
     <script>if (new URLSearchParams(location.search).get('payment') === 'success') document.getElementById('paymentBanner').hidden = false;</script>
