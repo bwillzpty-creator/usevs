@@ -23,10 +23,11 @@
     @media(max-width:480px){header{align-items:flex-start;flex-wrap:wrap;gap:10px}nav{width:100%;justify-content:space-between;padding-top:8px;border-top:1px solid #ffffff28}nav a{font-size:12px}.filters{grid-template-columns:1fr;padding:12px}main{margin-top:22px}}
     @media(max-width:360px){header{padding-inline:12px}main{width:calc(100% - 20px)}}
   </style>
+  <script src="/nav.js" defer></script>
   <script src="/dashboard.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard" aria-current="page">History</a><a href="/account">Account</a></nav></header>
+  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard" aria-current="page">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/login" data-signout>Sign out</a></nav></header>
   <main>
     <div class="head"><div><h1>Verification record history</h1><p>Search and manage your organization’s issued letters. Employee details remain encrypted at rest.</p></div><a href="/verify">+ New letter</a></div>
     <section class="panel">

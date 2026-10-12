@@ -1229,6 +1229,8 @@ app.get('/verify', requireIssuerPage, (req, res) =>
   res.sendFile(path.join(__dirname, 'verify.html'))
 );
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
+app.get('/public-verify', (req, res) => res.redirect('/lookup'));
+app.get('/nav.js', (req, res) => res.sendFile(path.join(__dirname, 'nav.js')));
 app.get('/dashboard', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/lookup.js', (req, res) => res.sendFile(path.join(__dirname, 'lookup.js')));
 app.get('/dashboard.js', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.js')));

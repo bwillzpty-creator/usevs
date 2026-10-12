@@ -6,13 +6,15 @@
       .then((response) => (response.ok ? response.json() : null))
       .then((session) => {
         if (!session || !session.success) return;
-        const links = [["/", "Home"], ["/verify", "Create letter"], ["/i9", "Form I-9"], ["/dashboard", "History"], ["/account", "Account"]];
+        const links = [["/", "Home"], ["/verify", "Create letter"], ["/i9", "Form I-9"], ["/dashboard", "History"], ["/public-verify", "Verify ID"], ["/account", "Account"], ["/login", "Sign out"]];
         nav.replaceChildren(...links.map(([href, label]) => {
           const link = document.createElement("a");
           link.href = href;
           link.textContent = label;
-          return link;
-        }));
+                  if (label === "Verify ID") link.setAttribute("aria-current", "page");
+                  if (label === "Sign out") link.setAttribute("data-signout", "");
+                  return link;
+                }));
       })
       .catch(() => {});
   }
