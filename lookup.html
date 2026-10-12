@@ -23,7 +23,7 @@
   <script src="/lookup.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify">Create letter</a><a href="/dashboard">History</a></nav></header>
+  <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav id="mainNav" aria-label="Main navigation"><a href="/">Home</a><a href="/lookup" aria-current="page">Verify ID</a></nav></header>
   <main><section class="card"><p class="eyebrow">PUBLIC DOCUMENT CHECK</p><h1>Verify a document ID</h1><p class="intro">Enter the reference printed on a US-EVS letter or scan its QR code to check issuer authorization and record status.</p>
     <form id="lookupForm"><label for="referenceNumber">Document Verification ID</label><input id="referenceNumber" name="referenceNumber" autocomplete="off" placeholder="EV-2026-0001" required><button type="submit">Verify document</button></form>
     <div id="result" aria-live="polite"></div>

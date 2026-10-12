@@ -1,4 +1,21 @@
 (() => {
+  // Public visitors see Home and Verify ID; a signed-in employer gets the full employer navigation.
+  const nav = document.getElementById("mainNav");
+  if (nav) {
+    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((session) => {
+        if (!session || !session.success) return;
+        const links = [["/", "Home"], ["/verify", "Create letter"], ["/i9", "Form I-9"], ["/dashboard", "History"], ["/account", "Account"]];
+        nav.replaceChildren(...links.map(([href, label]) => {
+          const link = document.createElement("a");
+          link.href = href;
+          link.textContent = label;
+          return link;
+        }));
+      })
+      .catch(() => {});
+  }
   const form = document.getElementById("lookupForm");
   const input = document.getElementById("referenceNumber");
   const resultNode = document.getElementById("result");
