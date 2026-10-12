@@ -77,12 +77,17 @@ function createEntitlements(database) {
     for (const email of [...new Set(emails.map(normalize).filter(Boolean))]) {
       const result = database.prepare('UPDATE entitlements SET credits = credits - 1, updated_at = ? WHERE email = ? AND credits > 0')
         .run(new Date().toISOString(), email);
-      if (result.changes > 0) return true;
+      if (result.changes > 0) return email;
     }
     return false;
   }
 
-  return { grant, revokeSubscription, getStatus, consume };
+  function restoreCredit(email) {
+    database.prepare('UPDATE entitlements SET credits = credits + 1, updated_at = ? WHERE email = ?')
+      .run(new Date().toISOString(), normalize(email));
+  }
+
+  return { grant, revokeSubscription, getStatus, consume, restoreCredit };
 }
 
 module.exports = { createEntitlements, PLAN_CATALOG };

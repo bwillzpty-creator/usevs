@@ -18,13 +18,12 @@
 
   function toIsoDate(displayValue) {
     if (!displayValue) return '';
-    const match = /^(\d{2})\/(\d{2})\/(\d{2})\$/.exec(displayValue);
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(displayValue);
     if (!match) throw new Error('Enter dates in MM/DD/YYYY format.');
-    const [, dayText, monthText, yearText] = match;
+    const [, monthText, dayText, yearText] = match;
     const day = Number(dayText);
     const month = Number(monthText);
-    const shortYear = Number(yearText);
-    const year = shortYear >= 50 ? 1900 + shortYear : 2000 + shortYear;
+    const year = Number(yearText);
     const date = new Date(Date.UTC(year, month - 1, day));
     if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
       throw new Error('Enter a valid calendar date.');
@@ -42,14 +41,14 @@
     const pay = compensationRedacted ? "[REDACTED]" : value("basePay", "[BASE PAY RATE]");
     const ytd = compensationRedacted ? "[REDACTED]" : value("ytdGross", "[YTD GROSS EARNINGS]");
     const bonus = compensationRedacted ? "[REDACTED]" : value("bonus", "[BONUS AMOUNT]");
-    const hours = value("averageHours", "the average hours");
+    const hours = value("averageHours", "[AVERAGE HOURS]");
     const department = value("department", "[DEPARTMENT]");
     const jobTitle = value("jobTitle", "[JOB TITLE]");
-    const workStatus = value("workStatus", "work status");
-    const purpose = value("purpose", "verification");
-    const representative = value("representativeName", "the representative");
-    const representativePhone = value("representativePhone", "the representative phone");
-    const representativeEmail = value("representativeEmail", "the representative email");
+    const workStatus = value("workStatus", "[WORK STATUS]");
+    const purpose = value("purpose", "[PURPOSE]");
+    const representative = value("representativeName", "[AUTHORIZED SIGNATORY NAME]");
+    const representativePhone = value("representativePhone", "[PHONE]");
+    const representativeEmail = value("representativeEmail", "[EMAIL]");
 
     setText("previewEmployer", value("employerName", "EMPLOYER LEGAL NAME").toUpperCase());
     setText("previewAddress", [
@@ -80,12 +79,12 @@
     });
     setText("paragraphOne", paragraphs[0]);
     const ssnLast4 = value("ssnLast4", "");
-    setText("ssnPreview", ssnLast4 ? `SSN: ${document.getElementById("redactSsn").checked ? "[REDACTED]" : `XXX-XX-\${ssnLast4}`}` : "");
+    setText("ssnPreview", ssnLast4 ? `SSN: ${document.getElementById("redactSsn").checked ? "[REDACTED]" : `XXX-XX-${ssnLast4}`}` : "");
     setText("paragraphTwo", paragraphs[1]);
     setText("paragraphThree", paragraphs[2]);
     setText("previewMeta", currentReference ? `Document ID: ${currentReference} · ${new Date().toLocaleDateString()}` : "Document ID assigned at issuance");
     document.getElementById("sealPreview").hidden = !document.getElementById("corporateSeal").checked;
-    setText("previewRepresentative", value("representativeName", "[AUTHORIZED SIGNATORY NAME]"));
+    setText("previewRepresentative", representative);
     setText("previewTitle", value("representativeTitle", "[TITLE]"));
     setText("disclaimerPreview", document.getElementById("liabilityDisclaimer").checked
       ? "Information provided reflects company records at the time of issuance and does not constitute a guarantee of future employment or compensation."
@@ -317,17 +316,9 @@
           window.location.href = result.redirectUrl || "/login";
           return;
         }
-        if (response.status === 402 || response.status === 402.1) {
-          if (window.PaymentClient && typeof window.PaymentClient.openCheckout === "function") {
-            window.PaymentClient.openCheckout({
-              onSuccess: () => {
-                status.textContent = "Payment successful! Resubmitting...";
-                form.requestSubmit();
-              }
-            });
-            return;
-          }
-          throw new Error(result.message || "Payment required to issue letter.");
+        if (response.status === 402) {
+          window.location.href = result.redirectUrl || "/select-plan?required=1";
+          return;
         }
         throw new Error(result.message || "Unable to generate the verification letter.");
       }

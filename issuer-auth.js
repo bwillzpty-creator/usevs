@@ -440,7 +440,7 @@ class IssuerAuth {
     const text = (value) => (typeof value === 'string' ? value.trim() : '');
     const legalName = text(input.legalName);
     const businessAddress = text(input.businessAddress);
-    const taxId = text(input.taxId);
+    let taxId = text(input.taxId);
     const businessEmail = normalizeEmail(input.businessEmail);
     const businessPhone = text(input.businessPhone);
     const signatoryName = text(input.signatoryName);
@@ -451,6 +451,8 @@ class IssuerAuth {
       throw new Error('Provide a valid business name, address, HR email, phone number, signatory name, and title.');
     }
     if (taxId && !/^\d{2}-?\d{7}$/.test(taxId)) throw new Error('EIN / Tax ID must use the format 12-3456789.');
+    const taxIdDigits = taxId.replace(/\D/g, '');
+    taxId = taxIdDigits ? `${taxIdDigits.slice(0, 2)}-${taxIdDigits.slice(2)}` : '';
     if (taxId && !this.encryptionKey) throw new Error('Secure storage for the EIN is not configured.');
     const encryptedTaxId = taxId ? this.encryptSensitive(taxId) : null;
     return this.updateStore((store) => {

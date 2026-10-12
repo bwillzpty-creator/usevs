@@ -1,12 +1,15 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { evaluateStateRules, getReverificationThresholds, parseDmyy, validateDocumentChoice, validateRemoteProcedure } = require('../i9-rules');
+const { evaluateStateRules, getReverificationThresholds, parseUsDate, validateDocumentChoice, validateRemoteProcedure } = require('../i9-rules');
 
-test('parses strict MM/DD/YYYY calendar dates with a documented two-digit-year pivot', () => {
-  assert.equal(parseDmyy('31/12/49'), '2049-12-31');
-  assert.equal(parseDmyy('01/01/50'), '1950-01-01');
-  assert.throws(() => parseDmyy('31/02/24'), /valid calendar date/);
-  assert.throws(() => parseDmyy('2024-02-29'), /DD\/MM\/YY/);
+test('parses strict MM/DD/YYYY calendar dates', () => {
+  assert.equal(parseUsDate('12/31/2049'), '2049-12-31');
+  assert.equal(parseUsDate('01/01/1950'), '1950-01-01');
+  assert.equal(parseUsDate('02/29/2024'), '2024-02-29');
+  assert.throws(() => parseUsDate('02/30/2024'), /valid calendar date/);
+  assert.throws(() => parseUsDate('13/01/2024'), /valid calendar date/);
+  assert.throws(() => parseUsDate('2024-02-29'), /MM\/DD\/YYYY/);
+  assert.throws(() => parseUsDate('12/31/49'), /MM\/DD\/YYYY/);
 });
 
 test('Florida 25 employee rule requires enrollment and E-Verify case tracking', () => {

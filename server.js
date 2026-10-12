@@ -16,7 +16,7 @@ const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 const { createPaymentLedger, verifyWebhookSignature } = require('./payment-ledger');
-const { evaluateStateRules, getReverificationThresholds, parseDmyy, validateDocumentChoice, validateRemoteProcedure } = require('./i9-rules');
+const { evaluateStateRules, getReverificationThresholds, parseUsDate, validateDocumentChoice, validateRemoteProcedure } = require('./i9-rules');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -729,8 +729,8 @@ app.post('/api/i9/records', requireIssuerSession, async (req, res) => {
   let hireDate;
   let authorizationExpiration = null;
   try {
-    hireDate = parseDmyy(body.hireDate);
-    if (body.authorizationExpiration) authorizationExpiration = parseDmyy(body.authorizationExpiration);
+    hireDate = parseUsDate(body.hireDate);
+    if (body.authorizationExpiration) authorizationExpiration = parseUsDate(body.authorizationExpiration);
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -1739,22 +1739,20 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
       (lifecycle === 'Former Employee' && (!validIsoDate(employmentEnd) || employmentEnd < employmentStart)) ||
       !purposeOptions.includes(purpose) || !statusOptions.includes(workStatus) ||
       !frequencyOptions.includes(payFrequency) || !eligibilityOptions.includes(rehireEligibility) ||
-      !representativeName || !representativeTitle || !representativePhone ||
+      !representativeName || !representativeTitle || !/^[+()\d .-]{7,30}$/.test(representativePhone) ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(representativeEmail) ||
       !['Yes', 'No'].includes(overtimeEligible) || (ssnLast4 && !/^\d{4}$/.test(ssnLast4))) {
     return res.status(400).json({ success: false, message: 'Complete required employee, employment, purpose, compensation, and representative fields with valid values.' });
   }
-  const creditAvailable = REVIEW_ACCOUNT_EMAILS.has(String(req.issuerContext.officer?.email || '').toLowerCase()) ||
-    entitlements.consume(getContextEmails(req.issuerContext));
-
-  if (!creditAvailable) {
-    return res.status(402).json({ 
-      success: false, 
+  const { employer, officer } = req.issuerContext;
+  const reviewBypass = REVIEW_ACCOUNT_EMAILS.has(String(officer.email || '').toLowerCase());
+  if (!reviewBypass && !entitlements.getStatus(getContextEmails(req.issuerContext)).hasAccess) {
+    return res.status(402).json({
+      success: false,
       message: 'An active plan or letter credit is required to access workspace tools.',
       redirectUrl: '/select-plan?required=1'
     });
   }
-  const { employer, officer } = req.issuerContext;
   if (representativeName.toLowerCase() !== officer.fullName.toLowerCase() ||
       representativeTitle.toLowerCase() !== officer.title.toLowerCase() ||
       representativeEmail !== officer.email.toLowerCase()) {
@@ -1805,6 +1803,20 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
   }
   const redactSsn = body.redactSsn === true;
   const redactCompensation = body.redactCompensation === true;
+  if (!redactCompensation) {
+    for (const [field, label] of [[body.basePay, 'base pay rate'], [body.ytdGross, 'YTD gross earnings'], [body.bonus, 'bonus amount']]) {
+      const text = normalizeLetterText(field, 60);
+      if (text && !/^[$€£]?\s?\d[\d,]*(\.\d{1,2})?(\s?[A-Za-z/ .-]{0,30})?$/.test(text)) {
+        return res.status(400).json({ success: false, message: `Enter a valid amount for the ${label}, such as $72,000 or $25.50/hr.` });
+      }
+    }
+  }
+  const einInput = normalizeLetterText(body.ein, 10);
+  const einDigits = einInput.replace(/\D/g, '');
+  if (einInput && !/^\d{2}-?\d{7}$/.test(einInput)) {
+    return res.status(400).json({ success: false, message: 'EIN must use the format XX-XXXXXXX.' });
+  }
+  const einFormatted = einDigits ? `${einDigits.slice(0, 2)}-${einDigits.slice(2)}` : '';
   const money = (field, label) => redactCompensation
     ? '[REDACTED]'
     : normalizeLetterText(field, 60) || 'N/A';
@@ -1870,7 +1882,7 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
     employer.legalName.toUpperCase(),
     employer.businessAddress,
     `${employer.businessPhone} · ${employer.businessEmail}`,
-    `EIN: ${normalizeLetterText(body.ein, 10) || 'N/A'}`,
+    `EIN: ${einFormatted || 'N/A'}`,
     `Prepared for: ${normalizeLetterText(body.recipientName, 160) || 'N/A'}`,
     normalizeLetterText(body.recipientAddress, 240) || 'N/A',
     '',
@@ -1903,7 +1915,18 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
     console.error('Unable to create verification QR code:', error);
     return res.status(503).json({ success: false, message: 'Unable to create the document verification code.' });
   }
+  let creditSource = null;
   try {
+    if (!reviewBypass) {
+      creditSource = entitlements.consume(getContextEmails(req.issuerContext));
+      if (!creditSource) {
+        return res.status(402).json({
+          success: false,
+          message: 'An active plan or letter credit is required to access workspace tools.',
+          redirectUrl: '/select-plan?required=1'
+        });
+      }
+    }
     const documentData = {
       letter,
       digitalInitials,
@@ -1929,7 +1952,7 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
         signatureMode: body.signatureMode,
         signature,
         logo,
-        ein: normalizeLetterText(body.ein, 10),
+        ein: einFormatted,
         notaryJurisdiction,
         commissionExpiration
       },
@@ -1989,6 +2012,7 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
     });
   } catch (error) {
     console.error('Unable to securely save verification letter:', error);
+    if (typeof creditSource === 'string') entitlements.restoreCredit(creditSource);
     return res.status(503).json({ success: false, message: 'Secure letter storage is unavailable; no letter was issued.' });
   }
 });
@@ -2002,6 +2026,8 @@ app.use((error, req, res, next) => {
     : status < 500 ? 'The request could not be processed.' : 'An unexpected server error occurred.';
   return res.status(status).json({ success: false, message });
 });
+
+process.on('unhandledRejection', (reason) => console.error('Unhandled promise rejection:', reason));
 
 // Initialize local ledgers before accepting traffic.
 async function startServer() {

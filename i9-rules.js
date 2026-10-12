@@ -4,12 +4,10 @@ const US_STATES = new Set([
   'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
 ]);
 
-function parseDmyy(value) {
-  if (typeof value !== 'string' || !/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
-    throw new Error('Dates must use MM/DD/YYYY format.');
-  }
-  const [day, month, shortYear] = value.split('/').map(Number);
-  const year = shortYear >= 50 ? 1900 + shortYear : 2000 + shortYear;
+function parseUsDate(value) {
+  const match = typeof value === 'string' ? /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value) : null;
+  if (!match) throw new Error('Dates must use MM/DD/YYYY format.');
+  const [month, day, year] = match.slice(1).map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
     throw new Error('Enter a valid calendar date.');
@@ -81,4 +79,4 @@ function getReverificationThresholds(daysRemaining) {
   return [90, 60, 30].filter((thresholdDays) => thresholdDays <= daysRemaining);
 }
 
-module.exports = { evaluateStateRules, getReverificationThresholds, parseDmyy, validateDocumentChoice, validateRemoteProcedure };
+module.exports = { evaluateStateRules, getReverificationThresholds, parseUsDate, validateDocumentChoice, validateRemoteProcedure };
