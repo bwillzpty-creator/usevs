@@ -581,19 +581,30 @@ function contextHasAccess(context) {
   return entitlements.getStatus(getContextEmails(context)).hasAccess;
 }
 
-async function requirePaidWorkspace(req, res, next) {
-  try {
-    const session = await issuerAuth.getSession(req);
-    res.setHeader('Cache-Control', 'no-store');
-    if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
-    refreshIssuerSessionCookie(req, res);
-    if (!contextHasAccess(session)) return res.redirect('/select-plan?required=1');
-    return next();
-  } catch (error) {
-    console.error('Unable to validate workspace access:', error);
-    return res.status(503).send('Employer sign-in is temporarily unavailable.');
-  }
+// Past purchasers (e.g. single-use with 0 credits) may still view and download earlier records.
+function contextHasHistoryAccess(context) {
+  if (contextHasAccess(context)) return true;
+  return entitlements.getStatus(getContextEmails(context)).everPurchased;
 }
+
+function workspaceGate(hasAccess) {
+  return async (req, res, next) => {
+    try {
+      const session = await issuerAuth.getSession(req);
+      res.setHeader('Cache-Control', 'no-store');
+      if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+      refreshIssuerSessionCookie(req, res);
+      if (!hasAccess(session)) return res.redirect('/select-plan?required=1');
+      return next();
+    } catch (error) {
+      console.error('Unable to validate workspace access:', error);
+      return res.status(503).send('Employer sign-in is temporarily unavailable.');
+    }
+  };
+}
+
+const requirePaidWorkspace = workspaceGate(contextHasAccess);
+const requireHistoryWorkspace = workspaceGate(contextHasHistoryAccess);
 
 async function requireIssuerPage(req, res, next) {
   try {
@@ -1152,7 +1163,7 @@ app.post('/api/auth/logout', requireIssuerSession, (req, res) => {
   return res.json({ success: true });
 });
 
-app.get('/account', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
+app.get('/account', requireHistoryWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
 app.get('/select-plan', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   return res.sendFile(path.join(__dirname, 'select-plan.html'));
@@ -1307,7 +1318,7 @@ app.get('/verify', requirePaidWorkspace, (req, res) =>
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
 app.get('/public-verify', (req, res) => res.redirect('/lookup'));
 app.get('/nav.js', (req, res) => res.sendFile(path.join(__dirname, 'nav.js')));
-app.get('/dashboard', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/dashboard', requireHistoryWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/lookup.js', (req, res) => res.sendFile(path.join(__dirname, 'lookup.js')));
 app.get('/dashboard.js', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.js')));
 app.get('/verify-app.js', (req, res) => res.sendFile(path.join(__dirname, 'verify-app.js')));

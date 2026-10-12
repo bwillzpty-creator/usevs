@@ -61,14 +61,16 @@ function createEntitlements(database) {
   function getStatus(emails) {
     let credits = 0;
     let subscriptionActive = false;
+    let everPurchased = false;
     const now = new Date();
     for (const email of [...new Set(emails.map(normalize).filter(Boolean))]) {
       const row = database.prepare('SELECT credits, subscription_expires_at AS expires FROM entitlements WHERE email = ?').get(email);
       if (!row) continue;
+      everPurchased = true;
       credits += row.credits;
       if (row.expires && new Date(row.expires) > now) subscriptionActive = true;
     }
-    return { credits, subscriptionActive, hasAccess: credits > 0 || subscriptionActive };
+    return { credits, subscriptionActive, everPurchased, hasAccess: credits > 0 || subscriptionActive };
   }
 
   // Subscribers are not charged a credit; otherwise one credit is consumed atomically.
