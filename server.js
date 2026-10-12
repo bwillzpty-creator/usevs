@@ -1,4 +1,5 @@
 const path = require('path');
+const { createEntitlements } = require('./entitlements');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const fsSync = require('node:fs');
@@ -44,6 +45,7 @@ let historyWriteQueue = Promise.resolve();
 let letterDataWriteQueue = Promise.resolve();
 let database;
 let paymentLedger;
+let entitlements;
 const gumroadProductPermalinks = new Set(['Single-Use', 'RecruiterPro', 'EnterpriseVault']);
 const issuerAuth = new IssuerAuth({
   storePath: issuerAccountsPath,
@@ -499,8 +501,15 @@ app.post('/api/gumroad-webhook', (req, res) => {
 
   if (cancelled === 'true') {
     console.info('[Gumroad] Subscription cancelled', { saleId, orderNumber, productPermalink });
+    if (productPermalink !== 'Single-Use') entitlements.revokeSubscription(email);
   } else {
     console.info('[Gumroad] Order confirmed', { saleId, orderNumber, productPermalink });
+    try {
+      entitlements.grant(email, productPermalink, saleId);
+    } catch (error) {
+      console.error('[Gumroad] Unable to record entitlement:', error);
+      return res.status(500).send('Unable to record purchase');
+    }
   }
 
   return res.status(200).send('Webhook processed');
@@ -557,6 +566,32 @@ async function requireIssuerSession(req, res, next) {
   } catch (error) {
     console.error('Unable to validate HR session:', error);
     return res.status(500).json({ success: false, message: 'Unable to validate issuer authorization.' });
+  }
+}
+
+const REVIEW_ACCOUNT_EMAILS = new Set(['review@us-evs.com', 'support@us-evs.com']);
+
+function getContextEmails(context) {
+  return [context.officer?.email, context.employer?.businessEmail];
+}
+
+function contextHasAccess(context) {
+  const officerEmail = String(context.officer?.email || '').toLowerCase();
+  if (REVIEW_ACCOUNT_EMAILS.has(officerEmail)) return true;
+  return entitlements.getStatus(getContextEmails(context)).hasAccess;
+}
+
+async function requirePaidWorkspace(req, res, next) {
+  try {
+    const session = await issuerAuth.getSession(req);
+    res.setHeader('Cache-Control', 'no-store');
+    if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+    refreshIssuerSessionCookie(req, res);
+    if (!contextHasAccess(session)) return res.redirect('/select-plan?required=1');
+    return next();
+  } catch (error) {
+    console.error('Unable to validate workspace access:', error);
+    return res.status(503).send('Employer sign-in is temporarily unavailable.');
   }
 }
 
@@ -652,17 +687,7 @@ async function processI9ExpirationAlerts() {
   }
 }
 
-app.get('/i9', async (req, res) => {
-  try {
-    const session = await issuerAuth.getSession(req);
-    res.setHeader('Cache-Control', 'no-store');
-    if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
-    return res.sendFile(path.join(__dirname, 'i9.html'));
-  } catch (error) {
-    console.error('Unable to validate I-9 workspace session:', error);
-    return res.status(503).send('Employer sign-in is temporarily unavailable.');
-  }
-});
+app.get('/i9', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'i9.html')));
 app.get('/i9.js', (req, res) => res.sendFile(path.join(__dirname, 'i9.js')));
 
 app.post('/api/i9/rules', requireIssuerSession, (req, res) => {
@@ -1127,7 +1152,12 @@ app.post('/api/auth/logout', requireIssuerSession, (req, res) => {
   return res.json({ success: true });
 });
 
-app.get('/account', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
+app.get('/account', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
+app.get('/select-plan', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.sendFile(path.join(__dirname, 'select-plan.html'));
+});
+app.get('/checkout.html', (req, res) => res.redirect('/select-plan'));
 app.get('/account.js', (req, res) => res.sendFile(path.join(__dirname, 'account.js')));
 
 app.get('/api/account/profile', requireIssuerSession, async (req, res) => {
@@ -1271,13 +1301,13 @@ app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
-app.get('/verify', requireIssuerPage, (req, res) =>
+app.get('/verify', requirePaidWorkspace, (req, res) =>
   res.sendFile(path.join(__dirname, 'verify.html'))
 );
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));
 app.get('/public-verify', (req, res) => res.redirect('/lookup'));
 app.get('/nav.js', (req, res) => res.sendFile(path.join(__dirname, 'nav.js')));
-app.get('/dashboard', requireIssuerPage, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/dashboard', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/lookup.js', (req, res) => res.sendFile(path.join(__dirname, 'lookup.js')));
 app.get('/dashboard.js', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.js')));
 app.get('/verify-app.js', (req, res) => res.sendFile(path.join(__dirname, 'verify-app.js')));
@@ -1714,6 +1744,16 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
       !['Yes', 'No'].includes(overtimeEligible) || (ssnLast4 && !/^\d{4}$/.test(ssnLast4))) {
     return res.status(400).json({ success: false, message: 'Complete required employee, employment, purpose, compensation, and representative fields with valid values.' });
   }
+  const creditAvailable = REVIEW_ACCOUNT_EMAILS.has(String(req.issuerContext.officer?.email || '').toLowerCase()) ||
+    entitlements.consume(getContextEmails(req.issuerContext));
+
+  if (!creditAvailable) {
+    return res.status(402).json({ 
+      success: false, 
+      message: 'An active plan or letter credit is required to access workspace tools.',
+      redirectUrl: '/select-plan?required=1'
+    });
+  }
   const { employer, officer } = req.issuerContext;
   if (representativeName.toLowerCase() !== officer.fullName.toLowerCase() ||
       representativeTitle.toLowerCase() !== officer.title.toLowerCase() ||
@@ -1968,6 +2008,7 @@ async function startServer() {
   await fs.mkdir(dataDirectory, { recursive: true });
   initializeDocumentDatabase();
   paymentLedger = createPaymentLedger(database);
+  entitlements = createEntitlements(database);
   await Promise.all([
     ensureJsonArrayFile(historyPath),
     ensureJsonArrayFile(secureLettersPath),

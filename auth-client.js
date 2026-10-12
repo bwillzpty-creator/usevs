@@ -198,6 +198,7 @@
         const result = await postJson('/api/employers', data);
         status.textContent = result.message;
         registrationForm.reset();
+        setTimeout(() => { window.location.href = '/select-plan'; }, 1500);
       } catch (error) {
         status.textContent = error.message;
       } finally {
