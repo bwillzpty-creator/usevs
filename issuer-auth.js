@@ -6,7 +6,7 @@ const SUPPORT_EMAIL = 'support@us-evs.com';
 // Used only while no email transport is configured, so the support account can still sign in.
 const SUPPORT_STATIC_CODE = '000000';
 const SESSION_COOKIE = 'usevs_issuer_session';
-const SESSION_LIFETIME_MS = 8 * 60 * 60 * 1000;
+const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
 const CHALLENGE_LIFETIME_MS = 10 * 60 * 1000;
 const EMAIL_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const MAX_BUSINESS_DOCUMENT_BYTES = 5 * 1024 * 1024;
@@ -546,6 +546,7 @@ class IssuerAuth {
       this.sessions.delete(tokenHash);
       return null;
     }
+    session.expiresAt = Date.now() + SESSION_LIFETIME_MS;
     return { employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
   }
 

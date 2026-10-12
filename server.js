@@ -522,14 +522,24 @@ function requireSameOrigin(req, res) {
   return false;
 }
 
-function setIssuerSessionCookie(res, token) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+function isSecureRequest(req) {
+  return process.env.NODE_ENV === 'production' || Boolean(req && req.secure);
+}
+
+function setIssuerSessionCookie(res, token, req) {
+  const secure = isSecureRequest(req) ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_LIFETIME_MS / 1000)}${secure}`);
 }
 
-function clearIssuerSessionCookie(res) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+function clearIssuerSessionCookie(res, req) {
+  const secure = isSecureRequest(req) ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
+}
+
+// getSession extends the server-side expiry; re-send the cookie so the browser's Max-Age rolls forward too.
+function refreshIssuerSessionCookie(req, res) {
+  const token = issuerAuth.readSessionToken(req);
+  if (token) setIssuerSessionCookie(res, token, req);
 }
 
 async function requireIssuerSession(req, res, next) {
@@ -542,6 +552,7 @@ async function requireIssuerSession(req, res, next) {
       message: 'Verified HR sign-in is required.',
       redirectUrl: '/login'
     });
+    refreshIssuerSessionCookie(req, res);
     return next();
   } catch (error) {
     console.error('Unable to validate HR session:', error);
@@ -557,6 +568,7 @@ async function requireIssuerPage(req, res, next) {
       return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
     }
     res.setHeader('Cache-Control', 'no-store');
+    refreshIssuerSessionCookie(req, res);
     return next();
   } catch (error) {
     console.error('Unable to validate protected page session:', error);
@@ -1052,6 +1064,7 @@ app.get('/api/auth/session', async (req, res) => {
       message: 'Sign-in required.',
       redirectUrl: '/login'
     });
+    refreshIssuerSessionCookie(req, res);
     return res.json({ success: true, ...context });
   } catch (error) {
     console.error('Unable to load issuer session:', error);
@@ -1100,7 +1113,7 @@ app.post('/api/auth/otp', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
     const result = await issuerAuth.completeSignIn(req.body?.challengeId, req.body?.code);
-    setIssuerSessionCookie(res, result.token);
+    setIssuerSessionCookie(res, result.token, req);
     const redirectTo = result.officer.email === 'review@us-evs.com' ? '/dashboard' : '/verify';
     return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
   } catch (error) {
@@ -1110,7 +1123,7 @@ app.post('/api/auth/otp', async (req, res) => {
 
 app.post('/api/auth/logout', requireIssuerSession, (req, res) => {
   issuerAuth.logout(req);
-  clearIssuerSessionCookie(res);
+  clearIssuerSessionCookie(res, req);
   return res.json({ success: true });
 });
 
