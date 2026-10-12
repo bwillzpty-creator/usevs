@@ -414,6 +414,38 @@ class IssuerAuth {
     return { token, employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
   }
 
+  senderAddress() {
+    const from = String(this.emailFrom || '');
+    return from.includes('<') ? from : `"US-EVS Support" <${from}>`;
+  }
+
+  // Footer is appended when a postal address is configured; transactional mail still sends without it.
+  optionalFooter() {
+    try { return this.getEmailFooter(); } catch { return ''; }
+  }
+
+  async sendTransactional(to, subject, text) {
+    if (!this.emailTransport || !this.emailFrom) return false;
+    await this.emailTransport.sendMail({ from: this.senderAddress(), to, subject, text: `${text}${this.optionalFooter()}` });
+    return true;
+  }
+
+  sendWelcomeEmail({ email, fullName }) {
+    const base = this.publicBaseUrl || 'https://us-evs.com';
+    return this.sendTransactional(email, 'Welcome to US-EVS - your account is ready',
+      `Hello ${fullName},\n\nWelcome to US-EVS. Your account was created successfully.\n\nYour login email: ${email}\n\nNext step: choose an access plan at ${base}/select-plan\nImportant: use this exact email address at checkout so your payment links to your account instantly.\n\nAlready subscribed? Sign in at ${base}/login`);
+  }
+
+  sendPaymentSuccessEmail({ email, planLabel, expiresAt, hasAccount }) {
+    const base = this.publicBaseUrl || 'https://us-evs.com';
+    const until = expiresAt ? new Date(expiresAt).toUTCString() : 'the end of your plan';
+    const next = hasAccount
+      ? `Sign in to open your dashboard: ${base}/login`
+      : `We could not find an account for this email yet. Register with this exact email at ${base}/register and your access will be unlocked automatically.`;
+    return this.sendTransactional(email, 'Payment received - your US-EVS access is active',
+      `Thank you. Your payment was successful.\n\nActive plan: ${planLabel}\nAccess until: ${until}\n\n${next}`);
+  }
+
   async findOfficerByEmail(emailValue) {
     const email = normalizeEmail(emailValue);
     const store = await this.readStore();

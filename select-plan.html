@@ -12,6 +12,8 @@
     p { color: #cbd5e1; }
     .banner { display: none; margin: 0 auto 24px; max-width: 720px; padding: 14px 18px; border: 1px solid #f0b429; background: #3b2f0b; color: #fde68a; border-radius: 8px; font-weight: 600; }
     .banner.show { display: block; }
+    .important { margin: 0 auto 24px; max-width: 720px; padding: 16px 20px; border: 2px solid #f97316; background: #2a1a0b; color: #ffedd5; border-radius: 8px; font-size: 1.05rem; line-height: 1.5; }
+    .important strong { color: #fb923c; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 32px; text-align: left; }
     .card { background: #14213d; border: 1px solid #334155; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; }
     .card.featured { border-color: #f97316; box-shadow: 0 6px 20px rgba(249, 115, 22, .25); }
@@ -27,6 +29,7 @@
 <body>
   <main>
     <div class="banner" id="gateBanner" role="alert">An active plan is required to access workspace tools.</div>
+    <div class="important" role="note"><strong>Important:</strong> You must use the exact same email address at Gumroad checkout that you used to register your account, ensuring your payment links instantly to your dashboard.</div>
     <h1>Choose how long you need access.</h1>
     <div class="grid">
       <article class="card" data-plan="1_day">

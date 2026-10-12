@@ -48,6 +48,7 @@ let database;
 let paymentLedger;
 let entitlements;
 const gumroadProductPermalinks = new Set(['Single-Use', 'RecruiterPro', 'EnterpriseVault']);
+const gumroadPlanTiers = { 'Single-Use': '1_day', RecruiterPro: '1_month', EnterpriseVault: '1_year' };
 const issuerAuth = new IssuerAuth({
   storePath: issuerAccountsPath,
   encryptionKey: process.env.DATA_ENCRYPTION_KEY,
@@ -494,7 +495,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '
 app.use(express.json({ limit: '7mb' }));
 app.use(express.urlencoded({ extended: false }));
 
-app.post('/api/gumroad-webhook', (req, res) => {
+app.post('/api/gumroad-webhook', async (req, res) => {
   const {
     seller_id: sellerId,
     product_permalink: productPermalink,
@@ -525,7 +526,18 @@ app.post('/api/gumroad-webhook', (req, res) => {
   } else {
     console.info('[Gumroad] Order confirmed', { saleId, orderNumber, productPermalink });
     try {
-      entitlements.grant(email, productPermalink, saleId);
+      const tier = gumroadPlanTiers[productPermalink];
+      const granted = entitlements.grant(email, tier, saleId);
+      if (granted) {
+        const status = entitlements.getStatus([email]);
+        const hasAccount = Boolean(await issuerAuth.findOfficerByEmail(email).catch(() => null));
+        issuerAuth.sendPaymentSuccessEmail({
+          email: email.trim().toLowerCase(),
+          planLabel: stripeCheckout.PLANS[tier].label,
+          expiresAt: status.expiresAt,
+          hasAccount
+        }).catch((error) => console.error('[Gumroad] Unable to send payment email:', error.message));
+      }
     } catch (error) {
       console.error('[Gumroad] Unable to record entitlement:', error);
       return res.status(500).send('Unable to record purchase');
@@ -614,6 +626,12 @@ function workspaceGate(hasAccess) {
       res.setHeader('Cache-Control', 'no-store');
       if (!session) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
       refreshIssuerSessionCookie(req, res);
+      if (!hasAccess(session) && req.query.payment === 'success') {
+        // The Gumroad redirect can arrive before its webhook; wait briefly for provisioning.
+        for (let attempt = 0; attempt < 8 && !hasAccess(session); attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
       if (!hasAccess(session)) return res.redirect('/select-plan?required=1');
       return next();
     } catch (error) {
@@ -1132,6 +1150,8 @@ app.post('/api/employers', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
     const account = await issuerAuth.registerAccount(req.body || {}, req.ip);
+    issuerAuth.sendWelcomeEmail({ email: String(req.body.email).trim().toLowerCase(), fullName: String(req.body.fullName).trim() })
+      .catch((error) => console.error('Unable to send welcome email:', error.message));
     const session = await issuerAuth.issueSession(account.employerId, account.officerId);
     setIssuerSessionCookie(res, session.token, req);
     return res.status(201).json({ success: true, redirectTo: '/select-plan', message: 'Account created.' });

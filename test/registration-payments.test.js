@@ -59,6 +59,25 @@ test('plan purchases set the tier and exact expiry, stacking on active time', ()
   assert.ok(new Date(status.expiresAt).getTime() - before > 7.9 * 86400000);
 });
 
+test('welcome and payment emails use the US-EVS Support sender', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-mail-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const messages = [];
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    emailTransport: { sendMail: async (message) => messages.push(message) },
+    emailFrom: 'no-reply@us-evs.com',
+    publicBaseUrl: 'https://us-evs.com'
+  });
+  await auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' });
+  assert.equal(messages[0].from, '"US-EVS Support" <no-reply@us-evs.com>');
+  assert.match(messages[0].text, /sam@acme\.example/);
+  assert.match(messages[0].text, /https:\/\/us-evs\.com\/select-plan/);
+  await auth.sendPaymentSuccessEmail({ email: 'sam@acme.example', planLabel: '1-Month Access', expiresAt: '2026-11-12T00:00:00.000Z', hasAccount: true });
+  assert.match(messages[1].text, /1-Month Access/);
+  assert.match(messages[1].text, /\/login/);
+});
+
 test('stripe webhook signatures and paid-session checks', () => {
   const secret = 'whsec_test';
   const body = Buffer.from('{"type":"checkout.session.completed"}');
