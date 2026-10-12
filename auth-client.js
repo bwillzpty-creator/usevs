@@ -23,6 +23,7 @@
       const button = loginForm.querySelector('button[type="submit"]');
       button.disabled = true;
       loginStatus.textContent = 'Verifying sign-in details…';
+      loginStatus.classList.remove('error');
       try {
         const result = await postJson('/api/auth/login', {
           email: loginForm.elements.email.value,
@@ -30,10 +31,14 @@
         });
         challengeId = result.challengeId;
         otpForm.hidden = false;
-        otpStatus.textContent = result.message || 'Enter the one-time code sent to your corporate email.';
-        document.getElementById('loginCode').focus();
+        document.getElementById('otpAlert').hidden = false;
+        otpStatus.textContent = '';
+        loginStatus.textContent = '';
+        otpForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('loginCode').focus({ preventScroll: true });
       } catch (error) {
         loginStatus.textContent = error.message;
+        loginStatus.classList.add('error');
       } finally {
         button.disabled = false;
       }
@@ -60,6 +65,7 @@
         window.location.assign(redirectTo);
       } catch (error) {
         otpStatus.textContent = error.message;
+        otpStatus.classList.add('error');
       } finally {
         button.disabled = false;
       }
