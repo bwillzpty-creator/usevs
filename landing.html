@@ -8,7 +8,6 @@
     <meta name="application-name" content="US-EVS" />
     <link rel="canonical" href="https://us-evs.com/" />
     <title>US-EVS | Employment Verification System</title>
-    <script src="https://gumroad.com/js/gumroad.js"></script>
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"SoftwareApplication","name":"US-EVS","alternateName":"Employment Verification System","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://us-evs.com/","description":"A commercial employment verification platform for authorized U.S. employers, recruiters, and compliance teams.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
     </script>
@@ -909,7 +908,7 @@
           <a href="/lookup">Verify a letter</a>
           <a href="/dashboard">Record history</a>
           <a class="button button-outline" href="/login">Sign In</a>
-          <a class="button button-orange" href="#pricing">Get Started</a>
+          <a class="button button-orange" href="/register">Get Started</a>
         </nav>
       </div>
     </header>
@@ -1081,7 +1080,7 @@
                 <li>PDF export for print or email</li>
                 <li>Reference number included</li>
               </ul>
-              <a class="button button-orange" href="https://usevs.gumroad.com/l/Single-Use?wanted=true" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="/register">Select plan</a>
             </article>
             <article class="pricing-card featured">
               <h3>Recruiter Pro</h3>
@@ -1091,7 +1090,7 @@
                 <li>Recruiter and small-team workflows</li>
                 <li>Audit trail for active cases</li>
               </ul>
-              <a class="button button-orange" href="https://usevs.gumroad.com/l/RecruiterPro?wanted=true" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="/register">Select plan</a>
             </article>
             <article class="pricing-card">
               <h3>Enterprise Vault</h3>
@@ -1101,7 +1100,7 @@
                 <li>Tracking, storage, and audit retention</li>
                 <li>Dedicated compliance controls</li>
               </ul>
-              <a class="button button-orange" href="https://usevs.gumroad.com/l/EnterpriseVault?wanted=true" data-gumroad-single-product="true">Select plan</a>
+              <a class="button button-orange" href="/register">Select plan</a>
             </article>
           </div>
         </div>
@@ -1185,23 +1184,6 @@
         document.getElementById('pricing').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
 
-      const gumroadMessageOrigins = new Set([
-        'https://gumroad.com',
-        'https://usevs.gumroad.com'
-      ]);
-
-      window.addEventListener('message', (event) => {
-        if (!gumroadMessageOrigins.has(event.origin)) return;
-
-        const data = event.data;
-        if (
-          data &&
-          typeof data === 'object' &&
-          (data.post_message_name === 'sale' || data.type === 'gumroad:checkout:success')
-        ) {
-          window.location.href = 'https://us-evs.com/dashboard';
-        }
-      });
     </script>
   </body>
 </html>

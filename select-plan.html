@@ -70,7 +70,7 @@
       let data = event.data;
       if (typeof data === 'string') { try { data = JSON.parse(data); } catch { return; } }
       if (data && (data.post_message_name === 'sale' || data.type === 'gumroad:checkout:success')) {
-        setTimeout(() => { location.href = '/verify'; }, 4000);
+        setTimeout(() => { location.href = '/dashboard?payment=success'; }, 4000);
       }
     });
   </script>
