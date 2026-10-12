@@ -9,7 +9,7 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { DatabaseSync } = require('node:sqlite');
 const QRCode = require('qrcode');
-const archiver = require('archiver');
+const { ZipArchive } = require('archiver');
 const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx');
 const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
@@ -920,7 +920,7 @@ app.get('/api/i9/audit-export', requireIssuerSession, (req, res) => {
         draft: JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(draft.encryptedDraft))),
         createdAt: draft.createdAt
       }));
-    const archive = archiver('zip', { zlib: { level: 6 } });
+    const archive = new ZipArchive({ zlib: { level: 6 } });
     archive.on('error', (error) => {
       console.error('I-9 audit ZIP failed:', error);
       res.destroy(error);
@@ -942,7 +942,8 @@ app.get('/api/i9/audit-export', requireIssuerSession, (req, res) => {
         archive.append(Buffer.from(contents, 'base64'), { name: `authorization-documents/${record.recordId}/${safeName}` });
       }
     }
-    archive.append('Contains confidential employee data. Handle and retain in accordance with applicable Form I-9 and privacy requirements.\n', { name: 'READ-ME.txt' });
+    const emptyNote = records.length ? '' : 'No Form I-9 records have been saved yet, so this archive contains no employee records.\n';
+    archive.append(`${emptyNote}Contains confidential employee data. Handle and retain in accordance with applicable Form I-9 and privacy requirements.\n`, { name: 'READ-ME.txt' });
     return archive.finalize();
   } catch (error) {
     console.error('Unable to create I-9 audit archive:', error);

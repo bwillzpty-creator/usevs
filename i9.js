@@ -7,6 +7,37 @@
   const recordRows = document.getElementById('recordRows');
   const recordsStatus = document.getElementById('recordsStatus');
   const saveButton = document.getElementById('saveI9');
+  const exportLink = document.getElementById('exportAudit');
+  const exportStatus = document.getElementById('exportStatus');
+
+  exportLink?.addEventListener('click', async (event) => {
+    event.preventDefault();
+    exportStatus.textContent = 'Preparing audit archive...';
+    try {
+      const response = await fetch(exportLink.href, { credentials: 'same-origin' });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          window.location.replace(result.redirectUrl || '/login');
+          return;
+        }
+        throw new Error(result.message || 'Unable to create the audit archive.');
+      }
+      const blob = await response.blob();
+      const match = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '');
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = match ? match[1] : 'i9-audit-archive.zip';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      exportStatus.textContent = 'Audit archive downloaded.';
+    } catch (error) {
+      exportStatus.textContent = `${error.message} Please try again or contact support.`;
+    }
+  });
 
   function displayDateToIso(value) {
     if (!value) return '';
