@@ -16,7 +16,41 @@
     const otpForm = document.getElementById('otpForm');
     const loginStatus = document.getElementById('loginStatus');
     const otpStatus = document.getElementById('otpStatus');
+    const otpAlert = document.getElementById('otpAlert');
+    const heading = document.getElementById('loginHeading');
+    const registerHint = document.getElementById('registerHint');
+    const codeInput = document.getElementById('loginCode');
     let challengeId = '';
+    let pendingCredentials = null;
+
+    function showStep(step) {
+      const second = step === 2;
+      loginForm.hidden = second;
+      otpForm.hidden = !second;
+      registerHint.hidden = second;
+      heading.textContent = second ? 'Verify your email' : 'Sign in';
+      if (second) {
+        otpForm.classList.add('first-step-hidden');
+        codeInput.value = '';
+        codeInput.focus({ preventScroll: true });
+      } else {
+        pendingCredentials = null;
+        challengeId = '';
+        loginForm.elements.password.value = '';
+        loginForm.elements.email.focus();
+      }
+    }
+
+    async function requestCode(credentials) {
+      const result = await postJson('/api/auth/login', credentials);
+      challengeId = result.challengeId;
+      pendingCredentials = credentials;
+      otpAlert.textContent = `A six-digit verification code was sent to ${credentials.email}.`;
+      otpStatus.textContent = '';
+      otpStatus.classList.remove('error');
+      loginStatus.textContent = '';
+      showStep(2);
+    }
 
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -25,20 +59,35 @@
       loginStatus.textContent = 'Verifying sign-in details…';
       loginStatus.classList.remove('error');
       try {
-        const result = await postJson('/api/auth/login', {
-          email: loginForm.elements.email.value,
+        await requestCode({
+          email: loginForm.elements.email.value.trim(),
           password: loginForm.elements.password.value
         });
-        challengeId = result.challengeId;
-        otpForm.hidden = false;
-        document.getElementById('otpAlert').hidden = false;
-        otpStatus.textContent = '';
-        loginStatus.textContent = '';
-        otpForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        document.getElementById('loginCode').focus({ preventScroll: true });
       } catch (error) {
         loginStatus.textContent = error.message;
         loginStatus.classList.add('error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('backToLogin').addEventListener('click', () => {
+      otpStatus.textContent = '';
+      showStep(1);
+    });
+
+    document.getElementById('resendCode').addEventListener('click', async (event) => {
+      if (!pendingCredentials) return showStep(1);
+      const button = event.currentTarget;
+      button.disabled = true;
+      otpStatus.classList.remove('error');
+      otpStatus.textContent = 'Sending a new code…';
+      try {
+        await requestCode(pendingCredentials);
+        otpStatus.textContent = 'A new code was sent.';
+      } catch (error) {
+        otpStatus.textContent = error.message;
+        otpStatus.classList.add('error');
       } finally {
         button.disabled = false;
       }
