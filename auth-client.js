@@ -93,12 +93,16 @@
       focusTarget.focus({ preventScroll: true });
     }
 
-    document.getElementById('forgotLink').addEventListener('click', () => {
+    document.getElementById('forgotLink').addEventListener('click', (event) => {
+      event.preventDefault();
       resetRequestForm.elements.email.value = loginForm.elements.email.value;
       showView('resetRequest');
     });
     document.querySelectorAll('[data-back-to-login]').forEach((link) => {
-      link.addEventListener('click', () => showView('login'));
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        showView('login');
+      });
     });
 
     resetRequestForm.addEventListener('submit', async (event) => {
