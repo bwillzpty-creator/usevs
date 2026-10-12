@@ -231,10 +231,15 @@ test('password change verifies the current password; reset needs an emailed code
   await auth.requestPasswordReset('nobody@example.test', '1.1.1.1');
   assert.equal(messages.filter((message) => /reset/i.test(message.subject)).length, 0);
   await auth.requestPasswordReset('review@us-evs.com', '1.1.1.1');
-  const code = /code is (\d{6})/.exec(messages.at(-1).text)[1];
-  await assert.rejects(auth.resetPassword('review@us-evs.com', '000001', 'AnotherPassword67!'), /invalid or expired/);
-  assert.equal(await auth.resetPassword('review@us-evs.com', code, 'AnotherPassword67!'), true);
-  await assert.rejects(auth.resetPassword('review@us-evs.com', code, 'AnotherPassword67!'), /invalid or expired/);
+  const link = messages.at(-1).text.match(/https:\/\/verification\.example\.test\/reset-password\?token=([\w-]+)/);
+  assert.ok(link, 'email carries a reset link');
+  const token = link[1];
+  assert.equal(auth.isResetTokenValid(token), true);
+  await assert.rejects(auth.resetPassword('bogus-token', 'AnotherPassword67!'), /invalid or has expired/);
+  await auth.beginSignIn('review@us-evs.com', 'BrandNewPassword45!', '1.1.1.1');
+  assert.equal(await auth.resetPassword(token, 'AnotherPassword67!'), true);
+  assert.equal(auth.isResetTokenValid(token), false);
+  await assert.rejects(auth.resetPassword(token, 'YetAnotherPassword89!'), /invalid or has expired/);
   assert.ok(await auth.beginSignIn('review@us-evs.com', 'AnotherPassword67!', '1.1.1.1'));
 });
 
@@ -249,7 +254,7 @@ test('password reset sends nothing and cannot be forced without email delivery',
   await auth.initialize();
   await auth.ensureSupportAccount('Support2026!');
   await auth.requestPasswordReset('support@us-evs.com', '1.1.1.1');
-  await assert.rejects(auth.resetPassword('support@us-evs.com', '000000', 'HijackedPassword99!'), /invalid or expired/);
+  await assert.rejects(auth.resetPassword('000000', 'HijackedPassword99!'), /invalid or has expired/);
   assert.ok(await auth.beginSignIn('support@us-evs.com', 'Support2026!', '1.1.1.1'));
 });
 

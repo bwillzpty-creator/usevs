@@ -36,14 +36,14 @@
       .status.error { color: #fecaca; }
       .alert-success { padding: 12px 14px; border: 1px solid #22c55e; border-left-width: 4px; border-radius: 4px; background: #14532d; color: #f0fdf4; font-size: 14px; font-weight: 700; line-height: 1.5; }
       .alert-success[hidden] { display: none; }
-      .otp-form, #resetRequestForm, #resetForm { animation: reveal .35s ease; }
+      .otp-form, #resetRequestForm { animation: reveal .35s ease; }
       .otp-form.first-step-hidden { margin-top: 0; padding-top: 0; border-top: 0; }
-      .otp-form[hidden], form[hidden], .hint[hidden] { display: none; }
+      .otp-form[hidden], div[hidden], form[hidden], .hint[hidden] { display: none; }
       .otp-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin: 0; }
       button.link-button, button.link-button:not(:disabled), button.link-button:hover { min-height: 44px; padding: 0 4px; border: 0 !important; background: transparent !important; background-color: transparent !important; color: #ffb17d !important; font-weight: 600; text-decoration: underline; }
       button.link-button:hover { color: #fff !important; }
       @keyframes reveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-      @media (prefers-reduced-motion: reduce) { .otp-form, #resetRequestForm, #resetForm { animation: none; } }
+      @media (prefers-reduced-motion: reduce) { .otp-form, #resetRequestForm { animation: none; } }
       footer { margin-bottom: 26px; padding: 24px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 12px; text-align: center; }
       .footer-legal { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 16px; }
       .footer-legal p { margin: 0; line-height: 1.6; }
@@ -54,7 +54,7 @@
       @media (max-width: 380px) { header, main, footer { width: calc(100% - 24px); } header { gap: 8px; } header > a:last-child { font-size: 13px; } h1 { font-size: 25px; } section, footer { padding: 15px; } }
     </style>
     <script src="/payment-client.js" defer></script>
-    <script src="/auth-client.js?v=20261012" defer></script>
+    <script src="/auth-client.js?v=20261013" defer></script>
   </head>
   <body>
     <header>
@@ -81,25 +81,17 @@
             <p class="otp-links"><button type="button" id="forgotLink" class="link-button">Forgot password?</button></p>
           </form>
           <form id="resetRequestForm" hidden data-private data-hj-suppress data-fs-exclude>
+            <p class="hint">Enter your corporate email and we will send you a link to reset your password.</p>
             <label for="resetEmail">Corporate email</label>
             <input id="resetEmail" name="email" type="email" autocomplete="username" required />
-            <button type="submit">Send reset code</button>
+            <button type="submit">Send reset link</button>
             <p id="resetRequestStatus" class="status" role="status" aria-live="polite"></p>
             <p class="otp-links"><button type="button" class="link-button" data-back-to-login>Back to Sign in</button></p>
           </form>
-          <form id="resetForm" hidden data-private data-hj-suppress data-fs-exclude>
-            <p id="resetAlert" class="alert-success" role="status"></p>
-            <label for="resetCode">Six-digit reset code</label>
-            <input id="resetCode" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
-            <label for="resetNewPassword">New password</label>
-            <input id="resetNewPassword" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
-            <label for="resetConfirmPassword">Confirm new password</label>
-            <input id="resetConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
-            <p class="hint">At least 12 characters.</p>
-            <button type="submit">Reset password</button>
-            <p id="resetStatus" class="status" role="status" aria-live="polite"></p>
+          <div id="resetSent" class="otp-form" hidden>
+            <p id="resetSentMessage" class="alert-success" role="status"></p>
             <p class="otp-links"><button type="button" class="link-button" data-back-to-login>Back to Sign in</button></p>
-          </form>
+          </div>
           <form id="otpForm" class="otp-form" hidden>
             <p id="otpAlert" class="alert-success" role="alert">A six-digit verification code was sent to your email.</p>
             <label for="loginCode">Six-digit email code</label>

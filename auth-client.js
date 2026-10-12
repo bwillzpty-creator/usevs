@@ -77,20 +77,19 @@
     });
 
     const resetRequestForm = document.getElementById('resetRequestForm');
-    const resetForm = document.getElementById('resetForm');
+    const resetSent = document.getElementById('resetSent');
     const loginNotice = document.getElementById('loginNotice');
-    let resetEmail = '';
 
     function showView(view) {
       loginForm.hidden = view !== 'login';
       otpForm.hidden = true;
       resetRequestForm.hidden = view !== 'resetRequest';
-      resetForm.hidden = view !== 'reset';
+      resetSent.hidden = view !== 'resetSent';
       registerHint.hidden = view !== 'login';
       heading.textContent = view === 'login' ? 'Sign in' : 'Reset password';
-      if (view !== 'login') loginNotice.hidden = true;
-      const focusTarget = { login: loginForm.elements.email, resetRequest: resetRequestForm.elements.email, reset: resetForm.elements.code }[view];
-      focusTarget.focus({ preventScroll: true });
+      loginNotice.hidden = true;
+      if (view === 'login') loginForm.elements.email.focus({ preventScroll: true });
+      if (view === 'resetRequest') resetRequestForm.elements.email.focus({ preventScroll: true });
     }
 
     document.getElementById('forgotLink').addEventListener('click', (event) => {
@@ -111,45 +110,12 @@
       const button = resetRequestForm.querySelector('button[type="submit"]');
       button.disabled = true;
       status.classList.remove('error');
-      status.textContent = 'Sending reset code…';
+      status.textContent = 'Sending reset link…';
       try {
-        resetEmail = resetRequestForm.elements.email.value.trim();
-        const result = await postJson('/api/auth/forgot-password', { email: resetEmail });
-        document.getElementById('resetAlert').textContent = result.message;
+        const result = await postJson('/api/auth/forgot-password', { email: resetRequestForm.elements.email.value.trim() });
+        document.getElementById('resetSentMessage').textContent = result.message;
         status.textContent = '';
-        showView('reset');
-      } catch (error) {
-        status.textContent = error.message;
-        status.classList.add('error');
-      } finally {
-        button.disabled = false;
-      }
-    });
-
-    resetForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const status = document.getElementById('resetStatus');
-      const button = resetForm.querySelector('button[type="submit"]');
-      status.classList.remove('error');
-      if (resetForm.elements.newPassword.value !== resetForm.elements.confirmPassword.value) {
-        status.textContent = 'New password and confirmation do not match.';
-        status.classList.add('error');
-        return;
-      }
-      button.disabled = true;
-      status.textContent = 'Resetting password…';
-      try {
-        const result = await postJson('/api/auth/reset-password', {
-          email: resetEmail,
-          code: resetForm.elements.code.value,
-          newPassword: resetForm.elements.newPassword.value
-        });
-        resetForm.reset();
-        status.textContent = '';
-        loginForm.elements.email.value = resetEmail;
-        showView('login');
-        loginNotice.textContent = result.message;
-        loginNotice.hidden = false;
+        showView('resetSent');
       } catch (error) {
         status.textContent = error.message;
         status.classList.add('error');

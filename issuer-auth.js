@@ -8,6 +8,7 @@ const SUPPORT_STATIC_CODE = '000000';
 const SESSION_COOKIE = 'usevs_issuer_session';
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
 const CHALLENGE_LIFETIME_MS = 10 * 60 * 1000;
+const RESET_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 const EMAIL_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const MAX_BUSINESS_DOCUMENT_BYTES = 5 * 1024 * 1024;
 
@@ -90,7 +91,7 @@ class IssuerAuth {
     this.qaOtpCode = typeof qaOtpCode === 'string' && /^\d{6}$/.test(qaOtpCode) ? qaOtpCode : '';
     this.challenges = new Map();
     this.sessions = new Map();
-    this.resetCodes = new Map();
+    this.resetTokens = new Map();
     this.sessionsPath = `${storePath}.sessions`;
     this.sessionWrite = Promise.resolve();
     this.loginRate = new Map();
@@ -508,38 +509,48 @@ class IssuerAuth {
     const email = normalizeEmail(emailValue);
     if (!EMAIL_PATTERN.test(email) || email.length > 254) return;
     this.checkRate(`reset:${remoteAddress || 'unknown'}:${email}`, 5, 60 * 60 * 1000, 'Too many reset requests. Try again later.');
-    if (!this.emailTransport) return;
+    if (!this.emailTransport || !this.publicBaseUrl) return;
     const store = await this.readStore();
     const employer = store.employers.find((entry) => entry.status === 'verified' && entry.officers.some((item) => item.email === email && item.active));
     if (!employer) return;
-    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-    this.resetCodes.set(email, { codeHash: digest(code), expiresAt: Date.now() + CHALLENGE_LIFETIME_MS, attempts: 0 });
+    for (const [hash, entry] of this.resetTokens) {
+      if (entry.email === email || entry.expiresAt < Date.now()) this.resetTokens.delete(hash);
+    }
+    const token = crypto.randomBytes(32).toString('base64url');
+    this.resetTokens.set(digest(token), { email, expiresAt: Date.now() + RESET_TOKEN_LIFETIME_MS });
+    const link = `${this.publicBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     await this.emailTransport.sendMail({
       from: this.emailFrom,
       to: email,
-      subject: 'Your US-EVS password reset code',
-      text: `Your password reset code is ${code}. It expires in 10 minutes. If you did not request this, ignore this email.${this.getEmailFooter()}`
+      subject: 'Reset your US-EVS password',
+      text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.getEmailFooter()}`,
+      html: `<p>Use the button below to set a new password. The link expires in 30 minutes and works once.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;font-weight:700;text-decoration:none;border-radius:4px">Reset password</a></p><p>Or copy this link: ${link}</p><p>If you did not request this, ignore this email.</p>`
     });
   }
 
-  async resetPassword(emailValue, code, newPassword) {
-    const email = normalizeEmail(emailValue);
-    const failure = 'Reset code is invalid or expired.';
-    const entry = this.resetCodes.get(email);
-    if (!entry || entry.expiresAt < Date.now() || entry.attempts >= 5) {
-      this.resetCodes.delete(email);
-      throw new Error(failure);
+  isResetTokenValid(token) {
+    const hash = digest(String(token || ''));
+    const entry = this.resetTokens.get(hash);
+    if (!entry || entry.expiresAt < Date.now()) {
+      this.resetTokens.delete(hash);
+      return false;
     }
-    entry.attempts += 1;
-    if (!safeEqual(entry.codeHash, digest(String(code || '')))) {
-      if (entry.attempts >= 5) this.resetCodes.delete(email);
+    return true;
+  }
+
+  async resetPassword(token, newPassword) {
+    const failure = 'This reset link is invalid or has expired. Request a new one.';
+    const hash = digest(String(token || ''));
+    const entry = this.resetTokens.get(hash);
+    if (!entry || entry.expiresAt < Date.now()) {
+      this.resetTokens.delete(hash);
       throw new Error(failure);
     }
     const newHash = hashPassword(newPassword);
-    this.resetCodes.delete(email);
+    this.resetTokens.delete(hash);
     const officerId = await this.updateStore((store) => {
       for (const employer of store.employers) {
-        const officer = employer.officers.find((item) => item.email === email && item.active);
+        const officer = employer.officers.find((item) => item.email === entry.email && item.active);
         if (officer && employer.status === 'verified') {
           officer.passwordHash = newHash;
           officer.passwordChangedAt = new Date().toISOString();

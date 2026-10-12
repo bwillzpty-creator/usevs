@@ -1162,7 +1162,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
     await issuerAuth.requestPasswordReset(req.body?.email, req.ip);
-    return res.json({ success: true, message: 'If an account exists for that email, a 6-digit reset code has been sent.' });
+    return res.json({ success: true, message: 'If an account exists for that email, a password reset link has been sent. It expires in 30 minutes.' });
   } catch (error) {
     const limited = /Too many/.test(error.message);
     return res.status(limited ? 429 : 503).json({ success: false, message: limited ? error.message : 'Password reset is temporarily unavailable.' });
@@ -1172,12 +1172,26 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
-    await issuerAuth.resetPassword(req.body?.email, req.body?.code, req.body?.newPassword);
+    if (req.body?.confirmPassword !== undefined && req.body.confirmPassword !== req.body.newPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirmation do not match.' });
+    }
+    await issuerAuth.resetPassword(req.body?.token, req.body?.newPassword);
     return res.json({ success: true, message: 'Password reset. Sign in with your new password.' });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
 });
+
+app.get('/api/auth/reset-password/validate', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.json({ success: true, valid: issuerAuth.isResetTokenValid(String(req.query.token || '')) });
+});
+
+app.get('/reset-password', (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+  return res.sendFile(path.join(__dirname, 'reset-password.html'));
+});
+app.get('/reset-password.js', (req, res) => res.sendFile(path.join(__dirname, 'reset-password.js')));
 
 app.post('/api/employers/officers', requireIssuerSession, async (req, res) => {
   try {
