@@ -203,3 +203,28 @@ test('active sessions roll their expiry forward', async (t) => {
   assert.ok(await auth.getSession(request));
   assert.ok(session.expiresAt > Date.now() + 11 * 60 * 60 * 1000);
 });
+
+test('sessions survive a server restart', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-persist-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const options = {
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: null, emailFrom: '', publicBaseUrl: '', reviewToken: '', businessPostalAddress: ''
+  };
+  const first = new IssuerAuth(options);
+  await first.initialize();
+  await first.ensureSupportAccount('Support2026!');
+  const challenge = await first.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.1');
+  const { token } = await first.completeSignIn(challenge.challengeId, '000000');
+  const request = { headers: { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` } };
+
+  const restarted = new IssuerAuth(options);
+  await restarted.initialize();
+  assert.ok(await restarted.getSession(request));
+  restarted.logout(request);
+  await restarted.persistSessions();
+  const afterLogout = new IssuerAuth(options);
+  await afterLogout.initialize();
+  assert.equal(await afterLogout.getSession(request), null);
+});

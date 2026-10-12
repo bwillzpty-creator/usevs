@@ -90,6 +90,8 @@ class IssuerAuth {
     this.qaOtpCode = typeof qaOtpCode === 'string' && /^\d{6}$/.test(qaOtpCode) ? qaOtpCode : '';
     this.challenges = new Map();
     this.sessions = new Map();
+    this.sessionsPath = `${storePath}.sessions`;
+    this.sessionWrite = Promise.resolve();
     this.loginRate = new Map();
     this.registrationRate = new Map();
     this.storeQueue = Promise.resolve();
@@ -104,6 +106,37 @@ class IssuerAuth {
         if (writeError.code !== 'EEXIST') throw writeError;
       });
     }
+    await this.loadSessions();
+  }
+
+  // Sessions are persisted so PM2 restarts and deploys do not sign users out.
+  async loadSessions() {
+    try {
+      const saved = JSON.parse(await fs.readFile(this.sessionsPath, 'utf8'));
+      const now = Date.now();
+      for (const [hash, session] of Object.entries(saved)) {
+        if (session && session.expiresAt > now) this.sessions.set(hash, session);
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') console.error('Unable to load saved sessions:', error.message);
+    }
+  }
+
+  persistSessions() {
+    const write = async () => {
+      const now = Date.now();
+      const snapshot = {};
+      for (const [hash, session] of this.sessions) {
+        if (session.expiresAt > now) snapshot[hash] = session;
+      }
+      const temporaryPath = `${this.sessionsPath}.tmp`;
+      await fs.writeFile(temporaryPath, JSON.stringify(snapshot), { encoding: 'utf8', mode: 0o600 });
+      await fs.rename(temporaryPath, this.sessionsPath);
+    };
+    this.sessionWrite = this.sessionWrite.then(write, write).catch((error) => {
+      console.error('Unable to save sessions:', error.message);
+    });
+    return this.sessionWrite;
   }
 
   getEmailFooter() {
@@ -517,8 +550,10 @@ class IssuerAuth {
     this.sessions.set(digest(token), {
       employerId: employer.id,
       officerId: officer.id,
-      expiresAt: Date.now() + SESSION_LIFETIME_MS
+      expiresAt: Date.now() + SESSION_LIFETIME_MS,
+      persistedAt: Date.now()
     });
+    await this.persistSessions();
     return { token, employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
   }
 
@@ -533,7 +568,10 @@ class IssuerAuth {
     const tokenHash = digest(token);
     const session = this.sessions.get(tokenHash);
     if (!token || !session || session.expiresAt <= Date.now()) {
-      if (session) this.sessions.delete(tokenHash);
+      if (session) {
+        this.sessions.delete(tokenHash);
+        this.persistSessions();
+      }
       return null;
     }
     for (const [hash, current] of this.sessions) {
@@ -544,15 +582,24 @@ class IssuerAuth {
     const officer = employer?.officers.find((entry) => entry.id === session.officerId && entry.active);
     if (!employer || !officer) {
       this.sessions.delete(tokenHash);
+      this.persistSessions();
       return null;
     }
     session.expiresAt = Date.now() + SESSION_LIFETIME_MS;
+    // Rolling expiry is kept in memory on every request; disk is updated at most every 5 minutes.
+    if (Date.now() - (session.persistedAt || 0) > 5 * 60 * 1000) {
+      session.persistedAt = Date.now();
+      this.persistSessions();
+    }
     return { employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
   }
 
   logout(request) {
     const token = this.readSessionToken(request);
-    if (token) this.sessions.delete(digest(token));
+    if (token) {
+      this.sessions.delete(digest(token));
+      this.persistSessions();
+    }
   }
 
   publicEmployer(employer) {

@@ -6,6 +6,8 @@ public/launch-config.js
 letter_history.json
 payments.json
 issuer_accounts.json
+issuer_accounts.json.sessions
+issuer_accounts.json.sessions.tmp
 secure_letters.json
 verification_audit.json
 usevs.sqlite
