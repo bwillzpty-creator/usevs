@@ -35,6 +35,7 @@
       .status { min-height: 20px; margin: 0; }
       .status.error { color: #fecaca; }
       .alert-success { padding: 12px 14px; border: 1px solid #22c55e; border-left-width: 4px; border-radius: 4px; background: #14532d; color: #f0fdf4; font-size: 14px; font-weight: 700; line-height: 1.5; }
+      .alert-success[hidden] { display: none; }
       .otp-form { animation: reveal .35s ease; }
       .otp-form.first-step-hidden { margin-top: 0; padding-top: 0; border-top: 0; }
       .otp-form[hidden], form[hidden], .hint[hidden] { display: none; }
@@ -69,6 +70,7 @@
       <div class="columns">
         <section aria-labelledby="loginHeading">
           <h2 id="loginHeading">Sign in</h2>
+          <p id="loginNotice" class="alert-success" role="status" hidden></p>
           <form id="loginForm" data-private data-hj-suppress data-fs-exclude>
             <label for="loginEmail">Email</label>
             <input id="loginEmail" name="email" type="email" autocomplete="username" required />
@@ -76,6 +78,27 @@
             <input id="loginPassword" name="password" type="password" autocomplete="current-password" data-private data-hj-suppress data-fs-exclude required />
             <button type="submit">Continue</button>
             <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
+            <p class="otp-links"><button type="button" id="forgotLink" class="link-button">Forgot password?</button></p>
+          </form>
+          <form id="resetRequestForm" hidden data-private data-hj-suppress data-fs-exclude>
+            <label for="resetEmail">Corporate email</label>
+            <input id="resetEmail" name="email" type="email" autocomplete="username" required />
+            <button type="submit">Send reset code</button>
+            <p id="resetRequestStatus" class="status" role="status" aria-live="polite"></p>
+            <p class="otp-links"><button type="button" class="link-button" data-back-to-login>Back to login</button></p>
+          </form>
+          <form id="resetForm" hidden data-private data-hj-suppress data-fs-exclude>
+            <p id="resetAlert" class="alert-success" role="status"></p>
+            <label for="resetCode">Six-digit reset code</label>
+            <input id="resetCode" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+            <label for="resetNewPassword">New password</label>
+            <input id="resetNewPassword" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+            <label for="resetConfirmPassword">Confirm new password</label>
+            <input id="resetConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+            <p class="hint">At least 12 characters.</p>
+            <button type="submit">Reset password</button>
+            <p id="resetStatus" class="status" role="status" aria-live="polite"></p>
+            <p class="otp-links"><button type="button" class="link-button" data-back-to-login>Back to login</button></p>
           </form>
           <form id="otpForm" class="otp-form" hidden>
             <p id="otpAlert" class="alert-success" role="alert">A six-digit verification code was sent to your email.</p>

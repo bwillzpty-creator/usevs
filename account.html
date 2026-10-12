@@ -18,7 +18,7 @@
     label{font-weight:700;font-size:13px;color:#e2e8f0!important}.hint{color:#e2e8f0;font-size:12px}
     input{width:100%;min-height:42px;padding:9px 10px;border:1px solid #bac6d5;border-radius:3px;background:#fff;color:#1a202c;font:inherit}input[readonly]{background:#e2e8f0;color:#334155}
     .actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:12px 24px;border:0;border-radius:3px;background:var(--accent);color:#ffffff!important;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}.button:hover,.button:focus-visible{background:#ea580c;color:#ffffff!important}button.button,button.button:not(:disabled),a.button,a.button:hover,button.button:hover,button.button:focus-visible{border-color:#f97316!important;background-color:#f97316!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff;font-weight:600;text-shadow:none}button.button:hover,a.button:hover{background-color:#ea580c!important}button.button.secondary,button.button.secondary:not(:disabled),a.button.secondary{border-color:#94a3b8!important;background:transparent!important;color:#f7fafc!important;-webkit-text-fill-color:#f7fafc}.button::selection{color:#fff;background:#c2410c}.button:disabled{opacity:.5;cursor:not-allowed}
-    #status{margin:0;color:#e2e8f0!important}#status.error{color:#fecaca!important}#status.good{color:#86efac!important}
+    #status,#passwordStatus{margin:0;color:#e2e8f0!important}#status.error,#passwordStatus.error{color:#fecaca!important}#status.good,#passwordStatus.good{color:#86efac!important}
     @media(max-width:700px){.grid{grid-template-columns:1fr}.panel{padding:16px}header{flex-wrap:wrap}}
   </style>
   <script src="/nav.js" defer></script>
@@ -46,6 +46,17 @@
           <div class="field wide"><label for="signatoryEmail">Sign-in email</label><input id="signatoryEmail" readonly><span class="hint">The sign-in email cannot be changed here.</span></div>
         </div>
         <div class="actions"><button class="button" id="saveProfile" type="submit">Save profile</button><button class="button secondary" id="signOut" type="button">Sign out</button><p id="status" role="status" aria-live="polite"></p></div>
+      </form>
+    </section>
+    <section class="panel" aria-labelledby="securityHeading">
+      <h2 id="securityHeading">Security &amp; Password</h2>
+      <form id="passwordForm" novalidate>
+        <div class="grid">
+          <div class="field wide"><label for="currentPassword">Current Password</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
+          <div class="field"><label for="newPassword">New Password</label><input id="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required><span class="hint">At least 12 characters.</span></div>
+          <div class="field"><label for="confirmPassword">Confirm New Password</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></div>
+        </div>
+        <div class="actions"><button class="button" id="updatePassword" type="submit">Update Password</button><p id="passwordStatus" role="status" aria-live="polite"></p></div>
       </form>
     </section>
   </main>

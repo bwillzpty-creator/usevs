@@ -90,6 +90,7 @@ class IssuerAuth {
     this.qaOtpCode = typeof qaOtpCode === 'string' && /^\d{6}$/.test(qaOtpCode) ? qaOtpCode : '';
     this.challenges = new Map();
     this.sessions = new Map();
+    this.resetCodes = new Map();
     this.sessionsPath = `${storePath}.sessions`;
     this.sessionWrite = Promise.resolve();
     this.loginRate = new Map();
@@ -461,6 +462,95 @@ class IssuerAuth {
       officer.title = signatoryTitle;
       return this.readProfile(employer, officer);
     });
+  }
+
+  async changePassword(context, currentPassword, newPassword, currentToken) {
+    if (typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 128) {
+      throw new Error('New password must be between 12 and 128 characters.');
+    }
+    if (currentPassword === newPassword) throw new Error('Choose a new password that differs from the current one.');
+    const rateKey = `change:${context.officer.id}`;
+    this.checkRate(rateKey, 8, 15 * 60 * 1000, 'Too many password attempts. Try again later.');
+    const newHash = hashPassword(newPassword);
+    await this.updateStore((store) => {
+      const employer = store.employers.find((entry) => entry.id === context.employer.id && entry.status === 'verified');
+      const officer = employer?.officers.find((entry) => entry.id === context.officer.id && entry.active);
+      if (!officer) throw new Error('Verified employer account required.');
+      if (!verifyPassword(currentPassword, officer.passwordHash)) throw new Error('Current password is incorrect.');
+      officer.passwordHash = newHash;
+      officer.passwordChangedAt = new Date().toISOString();
+    });
+    this.revokeOfficerSessions(context.officer.id, currentToken);
+    await this.persistSessions();
+    return true;
+  }
+
+  checkRate(key, limit, windowMs, message) {
+    const now = Date.now();
+    for (const [existingKey, entry] of this.loginRate) {
+      if (entry.resetAt < now) this.loginRate.delete(existingKey);
+    }
+    const entry = this.loginRate.get(key) || { attempts: 0, resetAt: now + windowMs };
+    entry.attempts += 1;
+    this.loginRate.set(key, entry);
+    if (entry.attempts > limit) throw new Error(message);
+  }
+
+  revokeOfficerSessions(officerId, keepToken) {
+    const keepHash = keepToken ? digest(keepToken) : '';
+    for (const [hash, session] of this.sessions) {
+      if (session.officerId === officerId && hash !== keepHash) this.sessions.delete(hash);
+    }
+  }
+
+  // Always resolves the same way so the endpoint cannot be used to discover registered emails.
+  async requestPasswordReset(emailValue, remoteAddress) {
+    const email = normalizeEmail(emailValue);
+    if (!EMAIL_PATTERN.test(email) || email.length > 254) return;
+    this.checkRate(`reset:${remoteAddress || 'unknown'}:${email}`, 5, 60 * 60 * 1000, 'Too many reset requests. Try again later.');
+    if (!this.emailTransport) return;
+    const store = await this.readStore();
+    const employer = store.employers.find((entry) => entry.status === 'verified' && entry.officers.some((item) => item.email === email && item.active));
+    if (!employer) return;
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    this.resetCodes.set(email, { codeHash: digest(code), expiresAt: Date.now() + CHALLENGE_LIFETIME_MS, attempts: 0 });
+    await this.emailTransport.sendMail({
+      from: this.emailFrom,
+      to: email,
+      subject: 'Your US-EVS password reset code',
+      text: `Your password reset code is ${code}. It expires in 10 minutes. If you did not request this, ignore this email.${this.getEmailFooter()}`
+    });
+  }
+
+  async resetPassword(emailValue, code, newPassword) {
+    const email = normalizeEmail(emailValue);
+    const failure = 'Reset code is invalid or expired.';
+    const entry = this.resetCodes.get(email);
+    if (!entry || entry.expiresAt < Date.now() || entry.attempts >= 5) {
+      this.resetCodes.delete(email);
+      throw new Error(failure);
+    }
+    entry.attempts += 1;
+    if (!safeEqual(entry.codeHash, digest(String(code || '')))) {
+      if (entry.attempts >= 5) this.resetCodes.delete(email);
+      throw new Error(failure);
+    }
+    const newHash = hashPassword(newPassword);
+    this.resetCodes.delete(email);
+    const officerId = await this.updateStore((store) => {
+      for (const employer of store.employers) {
+        const officer = employer.officers.find((item) => item.email === email && item.active);
+        if (officer && employer.status === 'verified') {
+          officer.passwordHash = newHash;
+          officer.passwordChangedAt = new Date().toISOString();
+          return officer.id;
+        }
+      }
+      throw new Error(failure);
+    });
+    this.revokeOfficerSessions(officerId);
+    await this.persistSessions();
+    return true;
   }
 
   async beginSignIn(emailValue, password, remoteAddress) {

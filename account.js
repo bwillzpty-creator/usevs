@@ -57,6 +57,52 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
+const passwordForm = document.getElementById('passwordForm');
+const passwordStatus = document.getElementById('passwordStatus');
+
+passwordForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  const button = document.getElementById('updatePassword');
+  passwordStatus.className = '';
+  if (!currentPassword || !newPassword) {
+    passwordStatus.textContent = 'Enter your current and new password.';
+    passwordStatus.className = 'error';
+    return;
+  }
+  if (newPassword.length < 12) {
+    passwordStatus.textContent = 'New password must be at least 12 characters.';
+    passwordStatus.className = 'error';
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    passwordStatus.textContent = 'New password and confirmation do not match.';
+    passwordStatus.className = 'error';
+    return;
+  }
+  button.disabled = true;
+  passwordStatus.textContent = 'Updating password...';
+  try {
+    const result = await api('/api/account/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+    });
+    if (result) {
+      passwordForm.reset();
+      passwordStatus.textContent = result.message;
+      passwordStatus.className = 'good';
+    }
+  } catch (error) {
+    passwordStatus.textContent = error.message;
+    passwordStatus.className = 'error';
+  } finally {
+    button.disabled = false;
+  }
+});
+
 document.getElementById('signOut').addEventListener('click', async () => {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });

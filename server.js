@@ -1147,6 +1147,38 @@ app.put('/api/account/profile', requireIssuerSession, async (req, res) => {
   }
 });
 
+app.put('/api/account/password', requireIssuerSession, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    if (newPassword !== confirmPassword) throw new Error('New password and confirmation do not match.');
+    await issuerAuth.changePassword(req.issuerContext, currentPassword, newPassword, issuerAuth.readSessionToken(req));
+    return res.json({ success: true, message: 'Password updated. Other signed-in devices were signed out.' });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  try {
+    await issuerAuth.requestPasswordReset(req.body?.email, req.ip);
+    return res.json({ success: true, message: 'If an account exists for that email, a 6-digit reset code has been sent.' });
+  } catch (error) {
+    const limited = /Too many/.test(error.message);
+    return res.status(limited ? 429 : 503).json({ success: false, message: limited ? error.message : 'Password reset is temporarily unavailable.' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  if (!requireSameOrigin(req, res)) return;
+  try {
+    await issuerAuth.resetPassword(req.body?.email, req.body?.code, req.body?.newPassword);
+    return res.json({ success: true, message: 'Password reset. Sign in with your new password.' });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/employers/officers', requireIssuerSession, async (req, res) => {
   try {
     const officer = await issuerAuth.addOfficer(req.issuerContext, req.body || {});

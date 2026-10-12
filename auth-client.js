@@ -76,6 +76,84 @@
       showStep(1);
     });
 
+    const resetRequestForm = document.getElementById('resetRequestForm');
+    const resetForm = document.getElementById('resetForm');
+    const loginNotice = document.getElementById('loginNotice');
+    let resetEmail = '';
+
+    function showView(view) {
+      loginForm.hidden = view !== 'login';
+      otpForm.hidden = true;
+      resetRequestForm.hidden = view !== 'resetRequest';
+      resetForm.hidden = view !== 'reset';
+      registerHint.hidden = view !== 'login';
+      heading.textContent = view === 'login' ? 'Sign in' : 'Reset password';
+      if (view !== 'login') loginNotice.hidden = true;
+      const focusTarget = { login: loginForm.elements.email, resetRequest: resetRequestForm.elements.email, reset: resetForm.elements.code }[view];
+      focusTarget.focus({ preventScroll: true });
+    }
+
+    document.getElementById('forgotLink').addEventListener('click', () => {
+      resetRequestForm.elements.email.value = loginForm.elements.email.value;
+      showView('resetRequest');
+    });
+    document.querySelectorAll('[data-back-to-login]').forEach((link) => {
+      link.addEventListener('click', () => showView('login'));
+    });
+
+    resetRequestForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('resetRequestStatus');
+      const button = resetRequestForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      status.classList.remove('error');
+      status.textContent = 'Sending reset code…';
+      try {
+        resetEmail = resetRequestForm.elements.email.value.trim();
+        const result = await postJson('/api/auth/forgot-password', { email: resetEmail });
+        document.getElementById('resetAlert').textContent = result.message;
+        status.textContent = '';
+        showView('reset');
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add('error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    resetForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('resetStatus');
+      const button = resetForm.querySelector('button[type="submit"]');
+      status.classList.remove('error');
+      if (resetForm.elements.newPassword.value !== resetForm.elements.confirmPassword.value) {
+        status.textContent = 'New password and confirmation do not match.';
+        status.classList.add('error');
+        return;
+      }
+      button.disabled = true;
+      status.textContent = 'Resetting password…';
+      try {
+        const result = await postJson('/api/auth/reset-password', {
+          email: resetEmail,
+          code: resetForm.elements.code.value,
+          newPassword: resetForm.elements.newPassword.value
+        });
+        resetForm.reset();
+        status.textContent = '';
+        loginForm.elements.email.value = resetEmail;
+        showView('login');
+        loginNotice.textContent = result.message;
+        loginNotice.hidden = false;
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add('error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
     document.getElementById('resendCode').addEventListener('click', async (event) => {
       if (!pendingCredentials) return showStep(1);
       const button = event.currentTarget;

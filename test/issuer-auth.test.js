@@ -204,6 +204,55 @@ test('active sessions roll their expiry forward', async (t) => {
   assert.ok(session.expiresAt > Date.now() + 11 * 60 * 60 * 1000);
 });
 
+test('password change verifies the current password; reset needs an emailed code', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-pw-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const messages = [];
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: { sendMail: async (message) => messages.push(message) },
+    emailFrom: 'verification@example.test',
+    publicBaseUrl: 'https://verification.example.test',
+    reviewToken: '',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
+  });
+  await auth.initialize();
+  await auth.ensureReviewAccount('ReviewPassword123!');
+  const store = await auth.readStore();
+  const context = { employer: { id: store.employers[0].id }, officer: { id: store.employers[0].officers[0].id } };
+
+  await assert.rejects(auth.changePassword(context, 'wrong-password-1', 'BrandNewPassword45!'), /Current password is incorrect/);
+  await assert.rejects(auth.changePassword(context, 'ReviewPassword123!', 'short'), /between 12 and 128/);
+  assert.equal(await auth.changePassword(context, 'ReviewPassword123!', 'BrandNewPassword45!'), true);
+  await assert.rejects(auth.beginSignIn('review@us-evs.com', 'ReviewPassword123!', '1.1.1.1'), /Sign-in failed/);
+  assert.ok(await auth.beginSignIn('review@us-evs.com', 'BrandNewPassword45!', '1.1.1.1'));
+
+  await auth.requestPasswordReset('nobody@example.test', '1.1.1.1');
+  assert.equal(messages.filter((message) => /reset/i.test(message.subject)).length, 0);
+  await auth.requestPasswordReset('review@us-evs.com', '1.1.1.1');
+  const code = /code is (\d{6})/.exec(messages.at(-1).text)[1];
+  await assert.rejects(auth.resetPassword('review@us-evs.com', '000001', 'AnotherPassword67!'), /invalid or expired/);
+  assert.equal(await auth.resetPassword('review@us-evs.com', code, 'AnotherPassword67!'), true);
+  await assert.rejects(auth.resetPassword('review@us-evs.com', code, 'AnotherPassword67!'), /invalid or expired/);
+  assert.ok(await auth.beginSignIn('review@us-evs.com', 'AnotherPassword67!', '1.1.1.1'));
+});
+
+test('password reset sends nothing and cannot be forced without email delivery', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-pw2-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: null, emailFrom: '', publicBaseUrl: '', reviewToken: '', businessPostalAddress: ''
+  });
+  await auth.initialize();
+  await auth.ensureSupportAccount('Support2026!');
+  await auth.requestPasswordReset('support@us-evs.com', '1.1.1.1');
+  await assert.rejects(auth.resetPassword('support@us-evs.com', '000000', 'HijackedPassword99!'), /invalid or expired/);
+  assert.ok(await auth.beginSignIn('support@us-evs.com', 'Support2026!', '1.1.1.1'));
+});
+
 test('sessions survive a server restart', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-persist-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
