@@ -355,6 +355,75 @@ class IssuerAuth {
     return { employerId: employer.id };
   }
 
+  // Simplified sign-up: no email delivery, address, or document is needed. The account can sign in immediately.
+  async registerAccount(input, remoteAddress) {
+    this.checkRate(`register:${remoteAddress || 'unknown'}`, 5, 60 * 60 * 1000, 'Too many registration attempts. Try again later.');
+    const text = (value) => (typeof value === 'string' ? value.trim() : '');
+    const fullName = text(input.fullName);
+    const organization = text(input.organization);
+    const email = normalizeEmail(input.email);
+    if (!fullName || fullName.length > 160 || !organization || organization.length > 200 || !isCorporateEmail(email)) {
+      throw new Error('Provide your full name, a valid official email, and your organization name.');
+    }
+    const passwordHash = hashPassword(input.password);
+    const now = new Date().toISOString();
+    const employer = {
+      id: crypto.randomUUID(),
+      legalName: organization,
+      businessAddress: '',
+      businessPhone: '',
+      businessEmail: email,
+      domain: getEmailDomain(email),
+      status: 'verified',
+      emailVerifiedAt: null,
+      verifiedAt: now,
+      createdAt: now,
+      businessDocument: null,
+      officers: [{
+        id: crypto.randomUUID(),
+        fullName,
+        title: 'Authorized Representative',
+        email,
+        passwordHash,
+        active: true,
+        createdAt: now
+      }]
+    };
+    await this.updateStore((store) => {
+      const exists = store.employers.some((entry) => entry.businessEmail === email ||
+        entry.officers.some((officer) => officer.email === email));
+      if (exists) throw new Error('An account already exists for this email. Sign in instead.');
+      store.employers.push(employer);
+    });
+    return { employerId: employer.id, officerId: employer.officers[0].id };
+  }
+
+  async issueSession(employerId, officerId) {
+    const store = await this.readStore();
+    const employer = store.employers.find((entry) => entry.id === employerId && entry.status === 'verified');
+    const officer = employer?.officers.find((entry) => entry.id === officerId && entry.active);
+    if (!employer || !officer) throw new Error('Employer or signatory authorization is no longer active.');
+    const token = crypto.randomBytes(32).toString('base64url');
+    this.sessions.set(digest(token), {
+      employerId: employer.id,
+      officerId: officer.id,
+      expiresAt: Date.now() + SESSION_LIFETIME_MS,
+      persistedAt: Date.now()
+    });
+    await this.persistSessions();
+    return { token, employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
+  }
+
+  async findOfficerByEmail(emailValue) {
+    const email = normalizeEmail(emailValue);
+    const store = await this.readStore();
+    for (const employer of store.employers) {
+      const officer = employer.officers.find((item) => item.email === email && item.active);
+      if (officer && employer.status === 'verified') return { employerId: employer.id, officerId: officer.id };
+    }
+    return null;
+  }
+
   async confirmEmployerEmail(token) {
     if (typeof token !== 'string' || !token) return false;
     return this.updateStore((store) => {

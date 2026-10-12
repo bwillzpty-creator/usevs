@@ -16,6 +16,7 @@ const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 const { createPaymentLedger, verifyWebhookSignature } = require('./payment-ledger');
+const stripeCheckout = require('./stripe-checkout');
 const { evaluateStateRules, getReverificationThresholds, parseUsDate, validateDocumentChoice, validateRemoteProcedure } = require('./i9-rules');
 
 const app = express();
@@ -468,6 +469,25 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit:
     return res.status(200).json({ success: true, duplicate: result.duplicate, payment: result.payment });
   } catch (error) {
     return res.status(400).json({ success: false, message: error instanceof SyntaxError ? 'Webhook body is invalid JSON.' : error.message });
+  }
+});
+
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), (req, res) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return res.status(503).json({ success: false, message: 'Stripe webhook is not configured.' });
+  if (!stripeCheckout.verifyStripeSignature(req.body, req.get('stripe-signature'), secret)) {
+    return res.status(400).json({ success: false, message: 'Webhook signature is invalid.' });
+  }
+  try {
+    const event = JSON.parse(req.body.toString('utf8'));
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+      const paid = stripeCheckout.paidSessionDetails(event.data?.object);
+      if (paid) entitlements.grant(paid.email, paid.tier, paid.saleId);
+    }
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('[Stripe] Unable to process webhook:', error);
+    return res.status(500).json({ success: false, message: 'Unable to process webhook.' });
   }
 });
 
@@ -1111,14 +1131,61 @@ app.get('/api/auth/session', async (req, res) => {
 app.post('/api/employers', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
-    await issuerAuth.registerEmployer(req.body || {}, req.ip);
-    return res.status(202).json({
-      success: true,
-      message: 'Check the corporate business email for a confirmation link. Business review is also required before letter issuance.'
-    });
+    const account = await issuerAuth.registerAccount(req.body || {}, req.ip);
+    const session = await issuerAuth.issueSession(account.employerId, account.officerId);
+    setIssuerSessionCookie(res, session.token, req);
+    return res.status(201).json({ success: true, redirectTo: '/select-plan', message: 'Account created.' });
   } catch (error) {
-    const unavailable = /requires configured|requires DATA_ENCRYPTION_KEY|Unable to send/.test(error.message);
-    return res.status(unavailable ? 503 : 400).json({ success: false, message: error.message });
+    return res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/plans', (req, res) => res.json({ success: true, plans: stripeCheckout.listPlans() }));
+
+function publicOrigin(req) {
+  return (process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+}
+
+app.post('/api/checkout', requireIssuerSession, async (req, res) => {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) return res.status(503).json({ success: false, message: 'Payments are not configured yet.' });
+  const tier = req.body?.plan;
+  if (!stripeCheckout.PLANS[tier]) return res.status(400).json({ success: false, message: 'Choose a valid plan.' });
+  try {
+    const session = await stripeCheckout.createCheckoutSession({
+      secretKey,
+      tier,
+      email: req.issuerContext.officer.email,
+      accountId: req.issuerContext.officer.id,
+      baseUrl: publicOrigin(req)
+    });
+    return res.json({ success: true, url: session.url });
+  } catch (error) {
+    console.error('[Stripe] Unable to create checkout session:', error);
+    return res.status(502).json({ success: false, message: 'Unable to start checkout. Please try again.' });
+  }
+});
+
+// Stripe redirects here after payment. The session is verified with Stripe before access is granted and the user signed in.
+app.get('/api/checkout/complete', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) return res.redirect('/select-plan');
+  try {
+    const paid = stripeCheckout.paidSessionDetails(await stripeCheckout.retrieveCheckoutSession(secretKey, req.query.session_id));
+    if (!paid) return res.redirect('/select-plan?payment=incomplete');
+    entitlements.grant(paid.email, paid.tier, paid.saleId);
+    if (!(await issuerAuth.getSession(req))) {
+      const account = await issuerAuth.findOfficerByEmail(paid.email);
+      if (account) {
+        const session = await issuerAuth.issueSession(account.employerId, account.officerId);
+        setIssuerSessionCookie(res, session.token, req);
+      }
+    }
+    return res.redirect('/dashboard?payment=success');
+  } catch (error) {
+    console.error('[Stripe] Unable to complete checkout:', error);
+    return res.redirect('/select-plan?payment=error');
   }
 });
 
@@ -1892,7 +1959,7 @@ app.post('/api/letters', requireIssuerSession, async (req, res) => {
   const letter = [
     employer.legalName.toUpperCase(),
     employer.businessAddress,
-    `${employer.businessPhone} · ${employer.businessEmail}`,
+    [employer.businessPhone, employer.businessEmail].filter(Boolean).join(' · '),
     `EIN: ${einFormatted || 'N/A'}`,
     `Prepared for: ${normalizeLetterText(body.recipientName, 160) || 'N/A'}`,
     normalizeLetterText(body.recipientAddress, 240) || 'N/A',

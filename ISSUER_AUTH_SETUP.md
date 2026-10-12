@@ -52,7 +52,7 @@ Replace `your-domain.example` with the Linode-hosted application's real domain. 
 
 ## Employer Review
 
-Employer registration requires the legal business name, address, business phone, and business and HR emails on the same non-consumer domain. The employer must confirm the corporate email. Accounts remain `pending_review` until a reviewer independently verifies the business and the named HR signatory's authority; a supplied document is supporting evidence, not automatic approval.
+Public sign-up (`/register`) collects only full name, official email, organization name, and password. The account is created as `verified` with the title "Authorized Representative", the user is signed in immediately, and is sent to `/select-plan` to buy a 1-day, 1-week, 1-month, or 1-year pass via Stripe Checkout (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; webhook at `/api/stripe/webhook`). No email delivery, `DATA_ENCRYPTION_KEY`, or postal address is needed to register. The email-confirmation and reviewer flow below applies only to legacy `pending_review` accounts.
 
 Use the configured reviewer token from a protected operator shell:
 

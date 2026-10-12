@@ -49,40 +49,27 @@
       <a href="/login">Sign in</a>
     </header>
     <main>
-      <h1>Register an employer</h1>
-      <p class="intro">Create a corporate employer account. Email confirmation and independent business review are required before letter issuance.</p>
+      <h1>Create your account</h1>
+      <p class="intro">Register in under a minute, then choose an access plan. Any team member or business owner can sign up.</p>
       <section aria-labelledby="registerHeading">
-        <h2 id="registerHeading">Employer details</h2>
+        <h2 id="registerHeading">Account details</h2>
         <form id="employerForm" data-private data-hj-suppress data-fs-exclude>
-          <label for="legalBusinessName">Legal business name</label>
-          <input id="legalBusinessName" name="legalBusinessName" autocomplete="organization" required />
-          <label for="businessAddress">Business street address</label>
-          <input id="businessAddress" name="businessAddress" autocomplete="street-address" required />
-          <label for="businessPhone">Main business phone</label>
-          <input id="businessPhone" name="businessPhone" type="tel" autocomplete="tel" required />
-          <label for="businessEmail">Corporate business email</label>
-          <input id="businessEmail" name="businessEmail" type="email" autocomplete="email" required />
-          <label for="officerName">Initial HR signatory full name</label>
-          <input id="officerName" name="officerName" autocomplete="name" required />
-          <label for="officerTitle">Signatory title</label>
-          <input id="officerTitle" name="officerTitle" required />
-          <label for="officerEmail">Signatory corporate email</label>
-          <input id="officerEmail" name="officerEmail" type="email" autocomplete="email" required />
-          <label for="officerPassword">Signatory password (12+ characters)</label>
-          <input id="officerPassword" name="officerPassword" type="password" minlength="12" autocomplete="new-password" data-private data-hj-suppress data-fs-exclude required />
-          <label for="businessDocument">Optional business document (PDF, PNG, or JPEG; max 5 MB)</label>
-          <input id="businessDocument" name="businessDocument" type="file" accept="application/pdf,image/png,image/jpeg" />
-          <p class="hint">Only upload material you own or are authorized to share. You are responsible for ensuring it is lawful, accurate, and does not violate another person's rights.</p>
-          <label><span><input type="checkbox" name="contentLiabilityAccepted" /> I accept responsibility for the content I upload.</span></label>
-          <label><span><input type="checkbox" name="ageConfirmed" required /> I confirm that I am at least 18 years old.</span></label>
-          <p class="hint">Business and signatory emails must use the same corporate domain. Consumer email providers are not accepted. Accounts remain pending until email confirmation and independent review are complete.</p>
-          <button type="submit">Create employer account</button>
+          <label for="fullName">Full name</label>
+          <input id="fullName" name="fullName" autocomplete="name" maxlength="160" required />
+          <label for="email">Official email</label>
+          <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required />
+          <label for="organization">Organization name</label>
+          <input id="organization" name="organization" autocomplete="organization" maxlength="200" required />
+          <label for="password">Password (12+ characters)</label>
+          <input id="password" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" data-private data-hj-suppress data-fs-exclude required />
+          <p class="hint">You will be registered as the Authorized Representative for your organization. You can add your address, phone, and EIN later from your account page.</p>
+          <button type="submit">Continue to plans</button>
           <p id="registrationStatus" class="status" role="status" aria-live="polite"></p>
         </form>
       </section>
     </main>
     <footer>
-      Employer accounts remain pending until business identity review is complete. Employee details are encrypted and deleted after 30 days.
+      Employee details are encrypted and deleted after 30 days.
       <p>&copy; 2026 Employment Verification USA · US-EVS Systems · <a href="mailto:support@us-evs.com">Contact support</a></p>
     </footer>
   </body>

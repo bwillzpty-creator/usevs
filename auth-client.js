@@ -176,31 +176,11 @@
       event.preventDefault();
       const button = registrationForm.querySelector('button[type="submit"]');
       button.disabled = true;
-      status.textContent = 'Submitting employer registration…';
+      status.textContent = 'Creating your account…';
       try {
         const data = Object.fromEntries(new FormData(registrationForm).entries());
-        const documentFile = registrationForm.elements.businessDocument.files[0];
-        if (documentFile && documentFile.size > 5 * 1024 * 1024) {
-          throw new Error('The business document must be 5 MB or smaller.');
-        }
-        if (documentFile) {
-          data.businessDocument = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(new Error('Unable to read the business document.'));
-            reader.readAsDataURL(documentFile);
-          });
-        } else {
-          data.businessDocument = '';
-        }
-        data.ageConfirmed = registrationForm.elements.ageConfirmed.checked;
-        data.contentLiabilityAccepted = registrationForm.elements.contentLiabilityAccepted.checked;
         const result = await postJson('/api/employers', data);
-        status.textContent = result.message;
-        registrationForm.reset();
-        const plan = new URLSearchParams(window.location.search).get('plan');
-        const target = ['single', 'monthly', 'yearly'].includes(plan) ? `/select-plan?plan=${plan}` : '/select-plan';
-        setTimeout(() => { window.location.href = target; }, 1500);
+        window.location.href = result.redirectTo || '/select-plan';
       } catch (error) {
         status.textContent = error.message;
       } finally {
