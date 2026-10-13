@@ -28,6 +28,34 @@ test('simplified registration needs no email delivery and signs the user in', as
   assert.deepEqual(await auth.findOfficerByEmail('SAM@acme.example'), account);
 });
 
+test('legacy accounts with differently cased stored emails can still sign in', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-legacy-login-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const messages = [];
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    emailTransport: { sendMail: async (message) => messages.push(message) },
+    emailFrom: 'verification@example.test',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
+  });
+  await auth.initialize();
+  const account = await auth.registerAccount({
+    fullName: 'Legacy User',
+    email: 'legacy@example.com',
+    organization: 'Legacy Co',
+    password: 'long-test-password-123'
+  }, '127.0.0.1');
+  await auth.updateStore((store) => {
+    store.employers[0].officers[0].email = 'Legacy@Example.com';
+  });
+
+  const challenge = await auth.beginSignIn('legacy@example.com', 'long-test-password-123', '127.0.0.1');
+  const code = messages[0].text.match(/\b(\d{6})\b/)[1];
+  const login = await auth.completeSignIn(challenge.challengeId, code);
+  assert.equal(login.officer.email, 'Legacy@Example.com');
+  assert.deepEqual(await auth.findOfficerByEmail('LEGACY@EXAMPLE.COM'), account);
+});
+
 test('plan purchases set the tier and exact expiry, stacking on active time', () => {
   const database = new DatabaseSync(':memory:');
   const entitlements = createEntitlements(database);

@@ -65,6 +65,19 @@ const issuerAuth = new IssuerAuth({
     : ''
 });
 
+function sendEmailNonBlocking(message, label) {
+  if (!emailTransport) return;
+  queueMicrotask(() => {
+    try {
+      Promise.resolve(emailTransport.sendMail(message)).catch((error) => {
+        console.warn(`[Email] Unable to send ${label}:`, error?.message || error);
+      });
+    } catch (error) {
+      console.warn(`[Email] Unable to send ${label}:`, error?.message || error);
+    }
+  });
+}
+
 async function ensureJsonArrayFile(filePath) {
   try {
     await fs.access(filePath);
@@ -75,6 +88,7 @@ async function ensureJsonArrayFile(filePath) {
     } catch (createError) {
       if (createError.code !== 'EEXIST') throw createError;
     }
+
   }
 }
 
@@ -613,7 +627,16 @@ function contextHasAccess(context) {
   return entitlements.getStatus(getContextEmails(context)).hasAccess;
 }
 
-// Past purchasers (e.g. single-use with 0 credits) may still view and download earlier records.
+function requireActiveWorkspaceAccess(req, res, next) {
+  if (contextHasAccess(req.issuerContext)) return next();
+  return res.status(402).json({
+    success: false,
+    message: 'An active plan or letter credit is required for this workspace action.',
+    redirectUrl: '/select-plan?required=1'
+  });
+}
+
+// Past purchasers (e.g. single-use with 0 credits) may still view earlier records.
 function contextHasHistoryAccess(context) {
   if (contextHasAccess(context)) return true;
   return entitlements.getStatus(getContextEmails(context)).everPurchased;
@@ -721,18 +744,14 @@ async function processI9ExpirationAlerts() {
     if (alert.thresholdDays === 90 || alert.thresholdDays === 60 || alert.thresholdDays === 30) createSection3Draft(record);
     const employer = store.employers.find((entry) => entry.id === alert.employerId && entry.status === 'verified');
     if (!emailTransport || !employer?.businessEmail) continue;
-    try {
-      await emailTransport.sendMail({
-        from: emailFrom,
-        to: employer.businessEmail,
-        subject: `Work authorization expires within ${alert.thresholdDays} days`,
-        text: `Work authorization record ${record.recordId} expires on ${record.authorizationExpiration}. Sign in at ${process.env.PUBLIC_BASE_URL || ''}/i9 and review the employee's Supplement B (formerly Section 3) worksheet. Complete the current USCIS form before the expiration date.${issuerAuth.getEmailFooter()}`
-      });
-      database.prepare('UPDATE i9_reverification_alerts SET sent_at = ? WHERE alert_id = ? AND sent_at IS NULL').run(nowIso, alert.alertId);
-      appendI9AuditEvent(alert.recordId, alert.employerId, 'system', 'reverification_notice_sent', { thresholdDays: alert.thresholdDays });
-    } catch (error) {
-      console.error('Unable to send I-9 reverification notice:', error);
-    }
+    sendEmailNonBlocking({
+      from: emailFrom,
+      to: employer.businessEmail,
+      subject: `Work authorization expires within ${alert.thresholdDays} days`,
+      text: `Work authorization record ${record.recordId} expires on ${record.authorizationExpiration}. Sign in at ${process.env.PUBLIC_BASE_URL || ''}/i9 and review the employee's Supplement B (formerly Section 3) worksheet. Complete the current USCIS form before the expiration date.${issuerAuth.optionalFooter()}`
+    }, 'I-9 reverification notice');
+    database.prepare('UPDATE i9_reverification_alerts SET sent_at = ? WHERE alert_id = ? AND sent_at IS NULL').run(nowIso, alert.alertId);
+    appendI9AuditEvent(alert.recordId, alert.employerId, 'system', 'reverification_notice_sent', { thresholdDays: alert.thresholdDays });
   }
 }
 
@@ -920,7 +939,7 @@ app.post('/api/i9/records', requireIssuerSession, async (req, res) => {
   });
 });
 
-app.get('/api/i9/records/:recordId/export', requireIssuerSession, (req, res) => {
+app.get('/api/i9/records/:recordId/export', requireIssuerSession, requireActiveWorkspaceAccess, (req, res) => {
   try {
     const record = getI9Record(req.params.recordId, req.issuerContext.employer.id);
     if (!record) return res.status(404).json({ success: false, message: 'I-9 record not found.' });
@@ -955,7 +974,7 @@ app.get('/api/i9/records/:recordId/export', requireIssuerSession, (req, res) => 
   }
 });
 
-app.get('/api/i9/records/:recordId/section3', requireIssuerSession, (req, res) => {
+app.get('/api/i9/records/:recordId/section3', requireIssuerSession, requireActiveWorkspaceAccess, (req, res) => {
   try {
     const row = database.prepare(`SELECT encrypted_draft AS encryptedDraft FROM i9_section3_drafts
       WHERE record_id = ? AND employer_id = ?`).get(req.params.recordId, req.issuerContext.employer.id);
@@ -975,7 +994,7 @@ app.get('/api/i9/records/:recordId/section3', requireIssuerSession, (req, res) =
   }
 });
 
-app.get('/api/i9/audit-export', requireIssuerSession, (req, res) => {
+app.get('/api/i9/audit-export', requireIssuerSession, requireActiveWorkspaceAccess, (req, res) => {
   const employerId = req.issuerContext.employer.id;
   try {
     appendI9AuditEvent('archive', employerId, req.issuerContext.officer.id, 'audit_archive_exported');
@@ -1139,7 +1158,11 @@ app.get('/api/auth/session', async (req, res) => {
       redirectUrl: '/login'
     });
     refreshIssuerSessionCookie(req, res);
-    return res.json({ success: true, ...context });
+    return res.json({
+      success: true,
+      ...context,
+      access: entitlements.getStatus(getContextEmails(context))
+    });
   } catch (error) {
     console.error('Unable to load issuer session:', error);
     return res.status(500).json({ success: false, message: 'Unable to load issuer session.' });
@@ -1225,6 +1248,17 @@ app.post('/api/auth/login', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
     const challenge = await issuerAuth.beginSignIn(req.body?.email, req.body?.password, req.ip);
+    // If qaOnly is true, email delivery was bypassed (QA mode or support account).
+    // Complete sign-in immediately with the known code instead of requiring OTP entry.
+    if (challenge.qaOnly) {
+      // Support account without email transport uses static code 000000
+      // QA OTP account uses the configured qaOtpCode
+      const code = req.body.email === 'support@us-evs.com' ? '000000' : (issuerAuth.qaOtpCode || '000000');
+      const result = await issuerAuth.completeSignIn(challenge.challengeId, code);
+      setIssuerSessionCookie(res, result.token, req);
+      const redirectTo = contextHasAccess(result) ? '/dashboard' : '/select-plan?required=1';
+      return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
+    }
     return res.json({ success: true, ...challenge, message: 'A one-time code was sent to the signatory corporate email.' });
   } catch (error) {
     const unavailable = /not configured/.test(error.message);
@@ -1237,7 +1271,9 @@ app.post('/api/auth/otp', async (req, res) => {
   try {
     const result = await issuerAuth.completeSignIn(req.body?.challengeId, req.body?.code);
     setIssuerSessionCookie(res, result.token, req);
-    const redirectTo = result.officer.email === 'review@us-evs.com' ? '/dashboard' : '/verify';
+    const redirectTo = contextHasAccess(result)
+      ? '/dashboard'
+      : '/select-plan?required=1';
     return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
   } catch (error) {
     return res.status(401).json({ success: false, message: error.message });
@@ -1517,23 +1553,18 @@ app.post('/send-email', async (req, res) => {
     return res.status(503).json({ success: false, message: 'Email delivery is not configured' });
   }
 
-  try {
-    await emailTransport.sendMail({
-      from: emailFrom,
-      to: recipient,
-      subject: 'Employment Verification Letter',
-      text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}${issuerAuth.getEmailFooter()}`,
-      attachments: [{
-        filename: 'employment_verification_letter.pdf',
-        content: createPdfBuffer(entry.letter, undefined, entry.digitalInitials),
-        contentType: 'application/pdf'
-      }]
-    });
-    return res.json({ success: true, message: 'Email sent successfully' });
-  } catch (error) {
-    console.error('Unable to send verification email:', error);
-    return res.status(502).json({ success: false, message: 'Unable to send email' });
-  }
+  sendEmailNonBlocking({
+    from: emailFrom,
+    to: recipient,
+    subject: 'Employment Verification Letter',
+    text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}${issuerAuth.optionalFooter()}`,
+    attachments: [{
+      filename: 'employment_verification_letter.pdf',
+      content: createPdfBuffer(entry.letter, undefined, entry.digitalInitials),
+      contentType: 'application/pdf'
+    }]
+  }, 'verification letter');
+  return res.json({ success: true, message: 'Email queued for delivery' });
 });
 
 app.get('/admin/stats', (req, res) => respondWithAdminHistory(res, 'stats', (history) => {
@@ -1738,7 +1769,7 @@ app.get('/api/letters', requireIssuerSession, async (req, res) => {
   }
 });
 
-app.get('/api/letters/:referenceNumber/export', requireIssuerSession, async (req, res) => {
+app.get('/api/letters/:referenceNumber/export', requireIssuerSession, requireActiveWorkspaceAccess, async (req, res) => {
   const format = typeof req.query.format === 'string' ? req.query.format.toLowerCase() : 'pdf';
   if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ success: false, message: 'Choose PDF or DOCX export.' });
   try {
@@ -1767,7 +1798,7 @@ app.get('/api/letters/:referenceNumber/export', requireIssuerSession, async (req
   }
 });
 
-app.post('/api/letters/:referenceNumber/email', requireIssuerSession, async (req, res) => {
+app.post('/api/letters/:referenceNumber/email', requireIssuerSession, requireActiveWorkspaceAccess, async (req, res) => {
   const recipientEmail = normalizeLetterText(req.body?.recipientEmail, 160);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
     return res.status(400).json({ success: false, message: 'A valid recipient email is required.' });
@@ -1789,15 +1820,15 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, async (req
       content: Buffer.from(file.contents, 'base64'),
       contentType: file.mediaType
     }))];
-    await emailTransport.sendMail({
+    sendEmailNonBlocking({
       from: emailFrom,
       to: recipientEmail,
       cc: req.issuerContext.employer.businessEmail,
       subject: `Employment Verification · ${req.params.referenceNumber}`,
-      text: `Please find the employment verification letter and requested attachments.\n\nDocument ID: ${req.params.referenceNumber}\n${issuerAuth.getEmailFooter()}`,
+      text: `Please find the employment verification letter and requested attachments.\n\nDocument ID: ${req.params.referenceNumber}\n${issuerAuth.optionalFooter()}`,
       attachments
-    });
-    return res.json({ success: true, message: `Verification letter sent to ${recipientEmail}.` });
+    }, 'verification record');
+    return res.json({ success: true, message: `Verification letter queued for delivery to ${recipientEmail}.` });
   } catch (error) {
     console.error('Unable to send verification record:', error);
     return res.status(502).json({ success: false, message: 'Unable to send this verification letter.' });

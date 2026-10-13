@@ -23,6 +23,10 @@
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       if (redirectIfUnauthorized(response, body)) return;
+      if (response.status === 402) {
+        window.location.replace(body.redirectUrl || "/select-plan?required=1");
+        return;
+      }
       throw new Error(body.message || "Unable to download this letter.");
     }
     const url = URL.createObjectURL(await response.blob());

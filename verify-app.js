@@ -240,6 +240,10 @@
         window.location.replace(result.redirectUrl || "/login");
         return;
       }
+      if (response.status === 402) {
+        window.location.replace(result.redirectUrl || "/select-plan?required=1");
+        return;
+      }
       throw new Error(result.message || "Unable to download this document.");
     }
     const url = URL.createObjectURL(await response.blob());
@@ -265,9 +269,33 @@
         window.location.replace(result.redirectUrl || "/login");
         return;
       }
+      if (response.status === 402) {
+        window.location.replace(result.redirectUrl || "/select-plan?required=1");
+        return;
+      }
       if (!response.ok) throw new Error(result.message || "Unable to send this document.");
       status.textContent = result.message;
     } catch (error) { status.textContent = error.message; }
+  });
+
+  document.getElementById("printLetter").addEventListener("click", async () => {
+    try {
+      const response = await fetch("/api/auth/session", { credentials: "same-origin" });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        window.location.replace(result.redirectUrl || "/login");
+        return;
+      }
+      if (!response.ok || !result.access?.hasAccess) {
+        if (window.confirm("Your access has expired or has no remaining credits. Choose a plan to print this letter.")) {
+          window.location.replace("/select-plan?required=1");
+        }
+        return;
+      }
+      window.print();
+    } catch (error) {
+      status.textContent = "Unable to verify workspace access before printing.";
+    }
   });
 
   form.addEventListener("submit", async (event) => {

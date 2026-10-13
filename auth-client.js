@@ -151,15 +151,7 @@
           challengeId,
           code: otpForm.elements.code.value
         });
-        const next = new URLSearchParams(window.location.search).get('next');
-        let redirectTo = result.redirectTo || '/verify';
-        if (next && next.startsWith('/') && !next.startsWith('//')) {
-          const candidate = new URL(next, window.location.origin);
-          if (candidate.origin === window.location.origin && candidate.pathname !== '/login' && candidate.pathname !== '/auth') {
-            redirectTo = `${candidate.pathname}${candidate.search}${candidate.hash}`;
-          }
-        }
-        window.location.assign(redirectTo);
+        window.location.assign(result.redirectTo || '/select-plan?required=1');
       } catch (error) {
         otpStatus.textContent = error.message;
         otpStatus.classList.add('error');

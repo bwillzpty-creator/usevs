@@ -333,25 +333,18 @@ class IssuerAuth {
 
     await this.updateStore((store) => {
       const existing = store.employers.some((entry) => entry.businessEmail === businessEmail ||
-        entry.officers.some((officer) => officer.email === officerEmail));
+        entry.officers.some((officer) => normalizeEmail(officer.email) === officerEmail));
       if (existing) throw new Error('An account already exists for this business or signatory email.');
       store.employers.push(employer);
     });
 
     const confirmationUrl = `${this.publicBaseUrl}/api/employers/confirm?token=${encodeURIComponent(emailToken)}`;
-    try {
-      await this.emailTransport.sendMail({
-        from: this.emailFrom,
-        to: businessEmail,
-        subject: 'Confirm your employer account',
-        text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.${this.getEmailFooter()}`
-      });
-    } catch (error) {
-      await this.updateStore((store) => {
-        store.employers = store.employers.filter((entry) => entry.id !== employer.id);
-      });
-      throw new Error('Unable to send employer confirmation email.');
-    }
+    this.sendEmailNonBlocking({
+      from: this.emailFrom,
+      to: businessEmail,
+      subject: 'Confirm your employer account',
+      text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.${this.optionalFooter()}`
+    }, 'employer confirmation');
     return { employerId: employer.id };
   }
 
@@ -391,7 +384,7 @@ class IssuerAuth {
     };
     await this.updateStore((store) => {
       const exists = store.employers.some((entry) => entry.businessEmail === email ||
-        entry.officers.some((officer) => officer.email === email));
+        entry.officers.some((officer) => normalizeEmail(officer.email) === email));
       if (exists) throw new Error('An account already exists for this email. Sign in instead.');
       store.employers.push(employer);
     });
@@ -424,9 +417,25 @@ class IssuerAuth {
     try { return this.getEmailFooter(); } catch { return ''; }
   }
 
+  sendEmailNonBlocking(message, label) {
+    if (!this.emailTransport) return;
+    queueMicrotask(() => {
+      try {
+        Promise.resolve(this.emailTransport.sendMail(message)).catch((err) => {
+          console.warn('SMTP connection failed, bypassing email delivery:', err?.message || err);
+        });
+      } catch (err) {
+        console.warn('SMTP connection failed, bypassing email delivery:', err?.message || err);
+      }
+    });
+  }
+
   async sendTransactional(to, subject, text) {
     if (!this.emailTransport || !this.emailFrom) return false;
-    await this.emailTransport.sendMail({ from: this.senderAddress(), to, subject, text: `${text}${this.optionalFooter()}` });
+    this.sendEmailNonBlocking(
+      { from: this.senderAddress(), to, subject, text: `${text}${this.optionalFooter()}` },
+      subject
+    );
     return true;
   }
 
@@ -450,7 +459,7 @@ class IssuerAuth {
     const email = normalizeEmail(emailValue);
     const store = await this.readStore();
     for (const employer of store.employers) {
-      const officer = employer.officers.find((item) => item.email === email && item.active);
+      const officer = employer.officers.find((item) => normalizeEmail(item.email) === email && item.active);
       if (officer && employer.status === 'verified') return { employerId: employer.id, officerId: officer.id };
     }
     return null;
@@ -503,7 +512,7 @@ class IssuerAuth {
     return this.updateStore((store) => {
       const employer = store.employers.find((entry) => entry.id === context.employer.id && entry.status === 'verified');
       if (!employer) throw new Error('Verified employer account required.');
-      if (store.employers.some((entry) => entry.officers.some((officer) => officer.email === email))) {
+      if (store.employers.some((entry) => entry.officers.some((officer) => normalizeEmail(officer.email) === email))) {
         throw new Error('A signatory account already exists for this email.');
       }
       const officer = { id: crypto.randomUUID(), fullName, title, email, passwordHash, active: true, createdAt: new Date().toISOString() };
@@ -614,7 +623,8 @@ class IssuerAuth {
     this.checkRate(`reset:${remoteAddress || 'unknown'}:${email}`, 5, 60 * 60 * 1000, 'Too many reset requests. Try again later.');
     if (!this.emailTransport || !this.publicBaseUrl) return;
     const store = await this.readStore();
-    const employer = store.employers.find((entry) => entry.status === 'verified' && entry.officers.some((item) => item.email === email && item.active));
+    const employer = store.employers.find((entry) => entry.status === 'verified' &&
+      entry.officers.some((item) => normalizeEmail(item.email) === email && item.active));
     if (!employer) return;
     for (const [hash, entry] of this.resetTokens) {
       if (entry.email === email || entry.expiresAt < Date.now()) this.resetTokens.delete(hash);
@@ -622,13 +632,13 @@ class IssuerAuth {
     const token = crypto.randomBytes(32).toString('base64url');
     this.resetTokens.set(digest(token), { email, expiresAt: Date.now() + RESET_TOKEN_LIFETIME_MS });
     const link = `${this.publicBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    await this.emailTransport.sendMail({
+    this.sendEmailNonBlocking({
       from: this.emailFrom,
       to: email,
       subject: 'Reset your US-EVS password',
-      text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.getEmailFooter()}`,
+      text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.optionalFooter()}`,
       html: `<p>Use the button below to set a new password. The link expires in 30 minutes and works once.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;font-weight:700;text-decoration:none;border-radius:4px">Reset password</a></p><p>Or copy this link: ${link}</p><p>If you did not request this, ignore this email.</p>`
-    });
+    }, 'password reset');
   }
 
   isResetTokenValid(token) {
@@ -653,7 +663,7 @@ class IssuerAuth {
     this.resetTokens.delete(hash);
     const officerId = await this.updateStore((store) => {
       for (const employer of store.employers) {
-        const officer = employer.officers.find((item) => item.email === entry.email && item.active);
+        const officer = employer.officers.find((item) => normalizeEmail(item.email) === entry.email && item.active);
         if (officer && employer.status === 'verified') {
           officer.passwordHash = newHash;
           officer.passwordChangedAt = new Date().toISOString();
@@ -697,7 +707,7 @@ class IssuerAuth {
     let employer;
     let officer;
     for (const entry of store.employers) {
-      const found = entry.officers.find((item) => item.email === email);
+      const found = entry.officers.find((item) => normalizeEmail(item.email) === email);
       if (found) {
         employer = entry;
         officer = found;
@@ -715,14 +725,6 @@ class IssuerAuth {
 
     const code = supportFallback ? SUPPORT_STATIC_CODE : qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const challengeId = crypto.randomBytes(24).toString('base64url');
-    if (!qaOnly) {
-      await this.emailTransport.sendMail({
-        from: this.emailFrom,
-        to: officer.email,
-        subject: 'Your HR sign-in verification code',
-        text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.getEmailFooter()}`
-      });
-    }
     this.challenges.set(challengeId, {
       employerId: employer.id,
       officerId: officer.id,
@@ -731,6 +733,14 @@ class IssuerAuth {
       attempts: 0,
       qaOnly
     });
+    if (!qaOnly) {
+      this.sendEmailNonBlocking({
+        from: this.emailFrom,
+        to: officer.email,
+        subject: 'Your HR sign-in verification code',
+        text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.optionalFooter()}`
+      }, 'login verification code');
+    }
     return { challengeId, qaOnly };
   }
 

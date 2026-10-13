@@ -34,6 +34,32 @@ test('review account is seeded idempotently and still requires email OTP', async
   assert.equal(context.officer.email, 'review@us-evs.com');
 });
 
+test('SMTP failures do not block login challenge creation', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-mail-timeout-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const messages = [];
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    emailTransport: {
+      sendMail: async (message) => {
+        messages.push(message);
+        throw new Error('Connection timeout');
+      }
+    },
+    emailFrom: 'verification@example.test',
+    businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
+  });
+  await auth.initialize();
+  await auth.ensureReviewAccount('ReviewPassword123!');
+
+  const challenge = await auth.beginSignIn('review@us-evs.com', 'ReviewPassword123!', '127.0.0.1');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(messages.length, 1);
+  const code = messages[0].text.match(/\b(\d{6})\b/)[1];
+  const login = await auth.completeSignIn(challenge.challengeId, code);
+  assert.ok(login.token);
+});
+
 test('employer review and HR OTP are required for an issuer session', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-issuer-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
