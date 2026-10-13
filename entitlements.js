@@ -80,6 +80,8 @@ function createEntitlements(database) {
     let everPurchased = false;
     let planTier = null;
     let expiresAt = null;
+    let expiredSubscription = false;
+    let expiredAt = null;
     const now = new Date();
     for (const email of [...new Set(emails.map(normalize).filter(Boolean))]) {
       const row = database.prepare('SELECT credits, subscription_expires_at AS expires, plan_tier AS tier FROM entitlements WHERE email = ?').get(email);
@@ -92,9 +94,22 @@ function createEntitlements(database) {
           expiresAt = row.expires;
           planTier = row.tier || null;
         }
+      } else if (row.expires && row.tier) {
+        expiredSubscription = true;
+        if (!expiredAt || row.expires > expiredAt) expiredAt = row.expires;
       }
     }
-    return { credits, subscriptionActive, everPurchased, planTier, expiresAt, hasAccess: credits > 0 || subscriptionActive };
+    const hasAccess = credits > 0 || subscriptionActive;
+    return {
+      credits,
+      subscriptionActive,
+      everPurchased,
+      planTier,
+      expiresAt,
+      hasAccess,
+      subscriptionExpired: expiredSubscription && !hasAccess,
+      expiredAt: expiredSubscription && !hasAccess ? expiredAt : null
+    };
   }
 
   // Subscribers are not charged a credit; otherwise one credit is consumed atomically.

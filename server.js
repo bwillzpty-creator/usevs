@@ -621,10 +621,19 @@ function getContextEmails(context) {
   return [context.officer?.email, context.employer?.businessEmail];
 }
 
-function contextHasAccess(context) {
+function getContextAccess(context) {
   const officerEmail = String(context.officer?.email || '').toLowerCase();
-  if (REVIEW_ACCOUNT_EMAILS.has(officerEmail)) return true;
-  return entitlements.getStatus(getContextEmails(context)).hasAccess;
+  const access = entitlements.getStatus(getContextEmails(context));
+  const reviewAccess = REVIEW_ACCOUNT_EMAILS.has(officerEmail);
+  return {
+    ...access,
+    hasAccess: access.hasAccess || reviewAccess,
+    subscriptionExpired: access.subscriptionExpired && !reviewAccess
+  };
+}
+
+function contextHasAccess(context) {
+  return getContextAccess(context).hasAccess;
 }
 
 function requireActiveWorkspaceAccess(req, res, next) {
@@ -638,8 +647,8 @@ function requireActiveWorkspaceAccess(req, res, next) {
 
 // Past purchasers (e.g. single-use with 0 credits) may still view earlier records.
 function contextHasHistoryAccess(context) {
-  if (contextHasAccess(context)) return true;
-  return entitlements.getStatus(getContextEmails(context)).everPurchased;
+  const access = getContextAccess(context);
+  return access.hasAccess || access.everPurchased;
 }
 
 function workspaceGate(hasAccess) {
@@ -758,7 +767,7 @@ async function processI9ExpirationAlerts() {
 app.get('/i9', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'i9.html')));
 app.get('/i9.js', (req, res) => res.sendFile(path.join(__dirname, 'i9.js')));
 
-app.post('/api/i9/rules', requireIssuerSession, (req, res) => {
+app.post('/api/i9/rules', requireIssuerSession, requireActiveWorkspaceAccess, (req, res) => {
   try {
     const result = evaluateStateRules(req.body || {});
     return res.json(result);
@@ -790,7 +799,7 @@ app.get('/api/i9/records', requireIssuerSession, (req, res) => {
   }
 });
 
-app.post('/api/i9/records', requireIssuerSession, async (req, res) => {
+app.post('/api/i9/records', requireIssuerSession, requireActiveWorkspaceAccess, async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   const body = req.body || {};
   const employerId = req.issuerContext.employer.id;
@@ -1158,10 +1167,12 @@ app.get('/api/auth/session', async (req, res) => {
       redirectUrl: '/login'
     });
     refreshIssuerSessionCookie(req, res);
+    const access = getContextAccess(context);
     return res.json({
       success: true,
       ...context,
-      access: entitlements.getStatus(getContextEmails(context))
+      access,
+      subscriptionExpired: access.subscriptionExpired
     });
   } catch (error) {
     console.error('Unable to load issuer session:', error);
@@ -1256,8 +1267,9 @@ app.post('/api/auth/login', async (req, res) => {
       const code = req.body.email === 'support@us-evs.com' ? '000000' : (issuerAuth.qaOtpCode || '000000');
       const result = await issuerAuth.completeSignIn(challenge.challengeId, code);
       setIssuerSessionCookie(res, result.token, req);
-      const redirectTo = contextHasAccess(result) ? '/dashboard' : '/select-plan?required=1';
-      return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
+      const access = getContextAccess(result);
+      const redirectTo = access.hasAccess || access.everPurchased ? '/dashboard' : '/select-plan?required=1';
+      return res.json({ success: true, employer: result.employer, officer: result.officer, access, subscriptionExpired: access.subscriptionExpired, redirectTo });
     }
     return res.json({ success: true, ...challenge, message: 'A one-time code was sent to the signatory corporate email.' });
   } catch (error) {
@@ -1271,10 +1283,9 @@ app.post('/api/auth/otp', async (req, res) => {
   try {
     const result = await issuerAuth.completeSignIn(req.body?.challengeId, req.body?.code);
     setIssuerSessionCookie(res, result.token, req);
-    const redirectTo = contextHasAccess(result)
-      ? '/dashboard'
-      : '/select-plan?required=1';
-    return res.json({ success: true, employer: result.employer, officer: result.officer, redirectTo });
+    const access = getContextAccess(result);
+    const redirectTo = access.hasAccess || access.everPurchased ? '/dashboard' : '/select-plan?required=1';
+    return res.json({ success: true, employer: result.employer, officer: result.officer, access, subscriptionExpired: access.subscriptionExpired, redirectTo });
   } catch (error) {
     return res.status(401).json({ success: false, message: error.message });
   }

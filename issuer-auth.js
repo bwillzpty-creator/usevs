@@ -441,8 +441,8 @@ class IssuerAuth {
 
   sendWelcomeEmail({ email, fullName }) {
     const base = this.publicBaseUrl || 'https://us-evs.com';
-    return this.sendTransactional(email, 'Welcome to US-EVS - your account is ready',
-      `Hello ${fullName},\n\nWelcome to US-EVS. Your account was created successfully.\n\nYour login email: ${email}\n\nNext step: choose an access plan at ${base}/select-plan\nImportant: use this exact email address at checkout so your payment links to your account instantly.\n\nAlready subscribed? Sign in at ${base}/login`);
+    return this.sendTransactional(email, 'Registration Successful - your US-EVS account is ready',
+      `Hello ${fullName},\n\nYour US-EVS account was created successfully.\n\nYour login email: ${email}\n\nChoose an access plan at ${base}/select-plan\nImportant: use this exact email address at checkout so your payment links to your account instantly.\n\nAlready subscribed? Sign in at ${base}/login`);
   }
 
   sendPaymentSuccessEmail({ email, planLabel, expiresAt, hasAccount }) {

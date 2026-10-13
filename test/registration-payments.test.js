@@ -87,6 +87,25 @@ test('plan purchases set the tier and exact expiry, stacking on active time', ()
   assert.ok(new Date(status.expiresAt).getTime() - before > 7.9 * 86400000);
 });
 
+test('expired subscriptions retain history access status without workspace access', () => {
+  const database = new DatabaseSync(':memory:');
+  const entitlements = createEntitlements(database);
+  entitlements.grant('expired@example.test', '1_month', 'expired_sale');
+  database.prepare('UPDATE entitlements SET subscription_expires_at = ? WHERE email = ?')
+    .run('2025-01-01T00:00:00.000Z', 'expired@example.test');
+
+  const expired = entitlements.getStatus(['expired@example.test']);
+  assert.equal(expired.everPurchased, true);
+  assert.equal(expired.hasAccess, false);
+  assert.equal(expired.subscriptionExpired, true);
+  assert.equal(expired.expiredAt, '2025-01-01T00:00:00.000Z');
+
+  entitlements.grant('expired@example.test', 'Single-Use', 'single_use_sale');
+  const withCredit = entitlements.getStatus(['expired@example.test']);
+  assert.equal(withCredit.hasAccess, true);
+  assert.equal(withCredit.subscriptionExpired, false);
+});
+
 test('welcome and payment emails use the US-EVS Support sender', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-mail-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
@@ -99,11 +118,26 @@ test('welcome and payment emails use the US-EVS Support sender', async (t) => {
   });
   await auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' });
   assert.equal(messages[0].from, '"US-EVS Support" <no-reply@us-evs.com>');
+  assert.match(messages[0].subject, /Registration Successful/);
   assert.match(messages[0].text, /sam@acme\.example/);
   assert.match(messages[0].text, /https:\/\/us-evs\.com\/select-plan/);
   await auth.sendPaymentSuccessEmail({ email: 'sam@acme.example', planLabel: '1-Month Access', expiresAt: '2026-11-12T00:00:00.000Z', hasAccount: true });
   assert.match(messages[1].text, /1-Month Access/);
   assert.match(messages[1].text, /\/login/);
+});
+
+test('welcome email SMTP failure does not reject account registration flow', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-welcome-failure-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    emailTransport: { sendMail: async () => { throw new Error('Connection timeout'); } },
+    emailFrom: 'no-reply@us-evs.com',
+    publicBaseUrl: 'https://us-evs.com'
+  });
+
+  await assert.doesNotReject(auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' }));
+  await new Promise((resolve) => setImmediate(resolve));
 });
 
 test('stripe webhook signatures and paid-session checks', () => {

@@ -4,6 +4,26 @@
   const status = document.getElementById("status");
   const dialog = document.getElementById("letterDialog");
   let records = [];
+  let subscriptionExpired = false;
+
+  async function loadSubscriptionStatus() {
+    try {
+      const response = await fetch("/api/auth/session", { credentials: "same-origin" });
+      const result = await response.json().catch(() => ({}));
+      if (redirectIfUnauthorized(response, result) || !response.ok) return;
+      if (!result.subscriptionExpired && !result.access?.subscriptionExpired) return;
+      subscriptionExpired = true;
+      document.body.classList.add("subscription-expired");
+      document.getElementById("subscriptionExpiredBanner").hidden = false;
+      document.querySelectorAll("[data-paid-action]").forEach((link) => {
+        link.setAttribute("aria-disabled", "true");
+        link.tabIndex = -1;
+        link.addEventListener("click", (event) => event.preventDefault());
+      });
+    } catch {
+      // The server continues to enforce access if the status request is unavailable.
+    }
+  }
 
   function redirectIfUnauthorized(response, result) {
     if (response.status !== 401) return false;
@@ -81,14 +101,17 @@
       const pdf = document.createElement("button");
       pdf.type = "button";
       pdf.textContent = "PDF";
+      pdf.disabled = subscriptionExpired;
       pdf.addEventListener("click", () => download(record.referenceNumber, "pdf").catch((error) => { status.textContent = error.message; }));
       const word = document.createElement("button");
       word.type = "button";
       word.textContent = "Word";
+      word.disabled = subscriptionExpired;
       word.addEventListener("click", () => download(record.referenceNumber, "docx").catch((error) => { status.textContent = error.message; }));
       const email = document.createElement("button");
       email.type = "button";
       email.textContent = "Resend";
+      email.disabled = subscriptionExpired;
       email.addEventListener("click", () => resend(record.referenceNumber).catch((error) => { status.textContent = error.message; }));
       actions.append(view, pdf, word, email);
       tbody.append(row);
@@ -131,5 +154,5 @@
   }
   form.addEventListener("submit", search);
   document.getElementById("closeDialog").addEventListener("click", () => dialog.close());
-  search();
+  loadSubscriptionStatus().finally(search);
 })();
