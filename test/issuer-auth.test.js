@@ -284,6 +284,30 @@ test('password reset sends nothing and cannot be forced without email delivery',
   assert.ok(await auth.beginSignIn('support@us-evs.com', 'Support2026!', '1.1.1.1'));
 });
 
+test('password reset requests stay successful when mail dispatch throws', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-pw-mail-failure-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const auth = new IssuerAuth({
+    storePath: path.join(directory, 'issuer_accounts.json'),
+    encryptionKey: Buffer.alloc(32, 7).toString('base64'),
+    emailTransport: { sendMail: async () => { throw new Error('Connection timeout'); } },
+    emailFrom: 'verification@example.test',
+    publicBaseUrl: 'https://verification.example.test',
+    reviewToken: '',
+    businessPostalAddress: ''
+  });
+  await auth.initialize();
+  await auth.ensureReviewAccount('ReviewPassword123!');
+
+  await assert.doesNotReject(auth.requestPasswordReset('review@us-evs.com', '1.1.1.1'));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(auth.resetTokens.size, 1);
+
+  auth.sendEmailNonBlocking = () => { throw new Error('SMTP dispatch unavailable'); };
+  await assert.doesNotReject(auth.requestPasswordReset('review@us-evs.com', '1.1.1.2'));
+  assert.equal(auth.resetTokens.size, 1);
+});
+
 test('sessions survive a server restart', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-persist-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));

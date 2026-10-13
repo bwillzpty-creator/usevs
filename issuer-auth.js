@@ -632,13 +632,17 @@ class IssuerAuth {
     const token = crypto.randomBytes(32).toString('base64url');
     this.resetTokens.set(digest(token), { email, expiresAt: Date.now() + RESET_TOKEN_LIFETIME_MS });
     const link = `${this.publicBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    this.sendEmailNonBlocking({
-      from: this.emailFrom,
-      to: email,
-      subject: 'Reset your US-EVS password',
-      text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.optionalFooter()}`,
-      html: `<p>Use the button below to set a new password. The link expires in 30 minutes and works once.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;font-weight:700;text-decoration:none;border-radius:4px">Reset password</a></p><p>Or copy this link: ${link}</p><p>If you did not request this, ignore this email.</p>`
-    }, 'password reset');
+    try {
+      this.sendEmailNonBlocking({
+        from: this.emailFrom,
+        to: email,
+        subject: 'Reset your US-EVS password',
+        text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.optionalFooter()}`,
+        html: `<p>Use the button below to set a new password. The link expires in 30 minutes and works once.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;font-weight:700;text-decoration:none;border-radius:4px">Reset password</a></p><p>Or copy this link: ${link}</p><p>If you did not request this, ignore this email.</p>`
+      }, 'password reset');
+    } catch (err) {
+      console.warn('SMTP connection failed, bypassing password reset email:', err?.message || err);
+    }
   }
 
   isResetTokenValid(token) {
