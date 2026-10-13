@@ -27,7 +27,7 @@
 <body>
   <header>
     <a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>Employer verification tools</small></span></a>
-    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a><a href="/public-verify">Verify ID</a><a href="/account" aria-current="page">Account</a><a href="/select-plan">Upgrade plan</a><a href="/login" data-signout>Sign out</a></nav>
+    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/verify">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a><a href="/public-verify">Verify ID</a><a href="/account" aria-current="page">Account</a><a href="/select-plan">Upgrade / Add credit</a><a href="/login" data-signout>Sign out</a></nav>
   </header>
   <main>
     <h1>Account profile</h1>
@@ -36,7 +36,9 @@
       <h2 id="profileHeading">Business and signatory details</h2>
       <form id="profileForm" novalidate>
         <div class="grid">
-          <div class="field wide"><label for="legalName">Legal business name</label><input id="legalName" name="legalName" maxlength="200" required autocomplete="organization"></div>
+          <div class="field wide"><label for="legalName">Legal business name (Optional)</label><input id="legalName" name="legalName" maxlength="200" autocomplete="organization"></div>
+          <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" maxlength="80" required autocomplete="given-name"></div>
+          <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" maxlength="80" required autocomplete="family-name"></div>
           <div class="field wide"><label for="businessAddress">Business address</label><input id="businessAddress" name="businessAddress" maxlength="300" required autocomplete="street-address"></div>
           <div class="field"><label for="taxId">EIN / Tax ID</label><input id="taxId" name="taxId" placeholder="12-3456789" inputmode="numeric" autocomplete="off"><span class="hint">Stored encrypted. Optional.</span></div>
           <div class="field"><label for="businessPhone">Phone number</label><input id="businessPhone" name="businessPhone" type="tel" maxlength="30" required autocomplete="tel"></div>

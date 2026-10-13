@@ -12,9 +12,43 @@
   let hasSignature = false;
   let signaturePreviewUrl = "";
   let logoPreviewUrl = "";
+  let workspacePaused = true;
 
   const value = (name, fallback) => form.elements[name]?.value.trim() || fallback;
   const setText = (id, text) => { document.getElementById(id).textContent = text; };
+
+  function updateWorkspaceActions() {
+    generateButton.disabled = workspacePaused;
+    document.getElementById("printLetter").disabled = workspacePaused;
+    ["downloadPdf", "downloadDocx", "emailLetter"].forEach((id) => {
+      document.getElementById(id).disabled = workspacePaused || !currentReference;
+    });
+  }
+
+  async function loadWorkspaceAccess() {
+    try {
+      const response = await fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        window.location.replace(result.redirectUrl || "/login");
+        return;
+      }
+      if (!response.ok) throw new Error(result.message || "Unable to verify workspace access.");
+      const subscriptionExpired = Boolean(result.subscriptionExpired || result.access?.subscriptionExpired);
+      workspacePaused = subscriptionExpired || result.access?.hasAccess !== true;
+      document.getElementById("subscriptionExpiredBanner").hidden = !subscriptionExpired;
+      updateWorkspaceActions();
+      if (workspacePaused) {
+        status.textContent = subscriptionExpired
+          ? "Workspace actions are paused until you renew or purchase a pass."
+          : "An active plan or letter credit is required for workspace actions.";
+      }
+    } catch (error) {
+      workspacePaused = true;
+      updateWorkspaceActions();
+      status.textContent = `${error.message} Refresh the page to try again.`;
+    }
+  }
 
   function toIsoDate(displayValue) {
     if (!displayValue) return '';
@@ -300,6 +334,7 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (workspacePaused) return;
     status.textContent = "Preparing encrypted document record…";
     generateButton.disabled = true;
     try {
@@ -345,6 +380,8 @@
           return;
         }
         if (response.status === 402) {
+          workspacePaused = true;
+          updateWorkspaceActions();
           status.textContent = result.message || "You have no letter credits remaining. ";
           const upgrade = document.createElement("a");
           upgrade.href = "/select-plan?required=1";
@@ -372,13 +409,13 @@
       const qrLabel = document.createElement("span");
       qrLabel.textContent = `Verify at ${window.location.origin}/lookup · ${result.signerTag}`;
       document.getElementById("qrPreview").replaceChildren(qr, qrLabel);
-      ["downloadPdf", "downloadDocx", "emailLetter"].forEach((id) => { document.getElementById(id).disabled = false; });
+      updateWorkspaceActions();
       status.textContent = `Letter issued and saved securely. Document ID: ${result.referenceNumber}`;
       updatePreview();
     } catch (error) {
       status.textContent = error.message;
     } finally {
-      generateButton.disabled = false;
+      generateButton.disabled = workspacePaused;
     }
   });
 
@@ -386,4 +423,5 @@
   document.getElementById("openPreviewTop").addEventListener("click", () => previewCard.classList.add("open"));
   document.getElementById("closePreview").addEventListener("click", () => previewCard.classList.remove("open"));
   updatePreview();
+  loadWorkspaceAccess();
 })();

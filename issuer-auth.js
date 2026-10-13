@@ -528,6 +528,8 @@ class IssuerAuth {
     }
     return {
       legalName: employer.legalName,
+      firstName: officer.firstName || '',
+      lastName: officer.lastName || '',
       businessAddress: employer.businessAddress,
       taxId,
       businessEmail: employer.businessEmail,
@@ -549,16 +551,19 @@ class IssuerAuth {
   async updateProfile(context, input) {
     const text = (value) => (typeof value === 'string' ? value.trim() : '');
     const legalName = text(input.legalName);
+    const firstName = text(input.firstName);
+    const lastName = text(input.lastName);
     const businessAddress = text(input.businessAddress);
     let taxId = text(input.taxId);
     const businessEmail = normalizeEmail(input.businessEmail);
     const businessPhone = text(input.businessPhone);
     const signatoryName = text(input.signatoryName);
     const signatoryTitle = text(input.signatoryTitle);
-    if (!legalName || legalName.length > 200 || !businessAddress || businessAddress.length > 300 ||
+    if (legalName.length > 200 || !firstName || firstName.length > 80 || !lastName || lastName.length > 80 ||
+      !businessAddress || businessAddress.length > 300 ||
       !isCorporateEmail(businessEmail) || !/^[+()\d .-]{7,30}$/.test(businessPhone) ||
       !signatoryName || signatoryName.length > 160 || !signatoryTitle || signatoryTitle.length > 120) {
-      throw new Error('Provide a valid business name, address, HR email, phone number, signatory name, and title.');
+      throw new Error('Provide valid first and last names, address, HR email, phone number, signatory name, and title.');
     }
     if (taxId && !/^\d{2}-?\d{7}$/.test(taxId)) throw new Error('EIN / Tax ID must use the format 12-3456789.');
     const taxIdDigits = taxId.replace(/\D/g, '');
@@ -571,6 +576,8 @@ class IssuerAuth {
       if (!employer || !officer) throw new Error('Verified employer account required.');
       Object.assign(employer, { legalName, businessAddress, businessEmail, businessPhone, profileUpdatedAt: new Date().toISOString() });
       if (encryptedTaxId) employer.taxId = encryptedTaxId; else delete employer.taxId;
+      officer.firstName = firstName;
+      officer.lastName = lastName;
       officer.fullName = signatoryName;
       officer.title = signatoryTitle;
       return this.readProfile(employer, officer);

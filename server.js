@@ -764,7 +764,8 @@ async function processI9ExpirationAlerts() {
   }
 }
 
-app.get('/i9', requirePaidWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'i9.html')));
+app.get('/i9', requireHistoryWorkspace, (req, res) => res.sendFile(path.join(__dirname, 'i9.html')));
+app.get('/form-i9', (req, res) => res.redirect('/i9'));
 app.get('/i9.js', (req, res) => res.sendFile(path.join(__dirname, 'i9.js')));
 
 app.post('/api/i9/rules', requireIssuerSession, requireActiveWorkspaceAccess, (req, res) => {
@@ -1446,7 +1447,7 @@ app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
-app.get('/verify', requirePaidWorkspace, (req, res) =>
+app.get('/verify', requireHistoryWorkspace, (req, res) =>
   res.sendFile(path.join(__dirname, 'verify.html'))
 );
 app.get('/verify-page', (req, res) => res.redirect('/lookup'));

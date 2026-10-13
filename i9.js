@@ -9,12 +9,27 @@
   const saveButton = document.getElementById('saveI9');
   const exportLink = document.getElementById('exportAudit');
   const exportStatus = document.getElementById('exportStatus');
+  const subscriptionExpiredBanner = document.getElementById('subscriptionExpiredBanner');
+  let workspacePaused = true;
+
+  function setWorkspacePaused(paused) {
+    workspacePaused = paused;
+    saveButton.disabled = paused;
+    exportLink.disabled = paused;
+    exportLink.tabIndex = paused ? -1 : 0;
+    if (paused && !exportStatus.textContent) {
+      exportStatus.textContent = 'Workspace actions are paused until you renew or purchase a pass.';
+    } else if (!paused && exportStatus.textContent.startsWith('Workspace actions are paused')) {
+      exportStatus.textContent = '';
+    }
+  }
 
   exportLink?.addEventListener('click', async (event) => {
     event.preventDefault();
+    if (workspacePaused) return;
     exportStatus.textContent = 'Preparing audit archive...';
     try {
-      const response = await fetch(exportLink.href, { credentials: 'same-origin' });
+      const response = await fetch('/api/i9/audit-export', { credentials: 'same-origin' });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         if (response.status === 401) {
@@ -78,6 +93,11 @@
   }
 
   async function updateRules() {
+    if (workspacePaused) {
+      rulesStatus.className = 'rule-status wide error';
+      rulesStatus.textContent = 'Workspace actions are paused until you renew or purchase a pass.';
+      return;
+    }
     const workState = form.elements.workState.value;
     const employeeCount = Number(form.elements.employeeCount.value);
     if (!workState || !Number.isSafeInteger(employeeCount) || employeeCount < 0) {
@@ -140,6 +160,7 @@
           button.className = 'button secondary';
           button.type = 'button';
           button.textContent = 'Open draft';
+          button.disabled = workspacePaused;
           button.addEventListener('click', () => window.open(`/api/i9/records/${encodeURIComponent(record.recordId)}/section3`, '_blank', 'noopener'));
           section3.replaceChildren(button);
         }
@@ -148,6 +169,13 @@
         link.className = 'button secondary';
         link.href = `/api/i9/records/${encodeURIComponent(record.recordId)}/export`;
         link.textContent = 'PDF';
+        if (workspacePaused) {
+          link.setAttribute('aria-disabled', 'true');
+          link.tabIndex = -1;
+        }
+        link.addEventListener('click', (event) => {
+          if (workspacePaused) event.preventDefault();
+        });
         worksheet.append(link);
         recordRows.append(row);
       });
@@ -164,6 +192,7 @@
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (workspacePaused) return;
     saveButton.disabled = true;
     status.textContent = 'Encrypting and saving verification record…';
     try {
@@ -193,11 +222,17 @@
     } catch (error) {
       status.textContent = error.message;
     } finally {
-      saveButton.disabled = false;
+      saveButton.disabled = workspacePaused;
     }
   });
 
-  requestJson('/api/auth/session').then(loadRecords).catch((error) => {
+  requestJson('/api/auth/session').then((session) => {
+    const subscriptionExpired = Boolean(session.subscriptionExpired || session.access?.subscriptionExpired);
+    subscriptionExpiredBanner.hidden = !subscriptionExpired;
+    setWorkspacePaused(subscriptionExpired || session.access?.hasAccess !== true);
+    return loadRecords();
+  }).catch((error) => {
+    setWorkspacePaused(true);
     recordsStatus.textContent = error.message;
   });
 })();

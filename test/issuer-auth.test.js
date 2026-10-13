@@ -202,13 +202,23 @@ test('profile updates persist and encrypt the EIN', async (t) => {
   const store = await auth.readStore();
   const context = { employer: { id: store.employers[0].id }, officer: { id: store.employers[0].officers[0].id } };
   const saved = await auth.updateProfile(context, {
-    legalName: 'Acme LLC', businessAddress: '1 Main St', taxId: '12-3456789', businessEmail: 'hr@acme.test',
+    legalName: 'Acme LLC', firstName: 'Jane', lastName: 'Doe',
+    businessAddress: '1 Main St', taxId: '12-3456789', businessEmail: 'hr@acme.test',
     businessPhone: '202-555-0111', signatoryName: 'Jane Doe', signatoryTitle: 'HR Director'
   });
   assert.equal(saved.taxId, '12-3456789');
   assert.equal((await auth.getProfile(context)).legalName, 'Acme LLC');
+  assert.equal(saved.firstName, 'Jane');
+  assert.equal(saved.lastName, 'Doe');
   assert.doesNotMatch(await fs.readFile(path.join(directory, 'issuer_accounts.json'), 'utf8'), /12-3456789/);
-  await assert.rejects(auth.updateProfile(context, { legalName: 'x' }), /Provide a valid/);
+  const withoutLegalName = await auth.updateProfile(context, {
+    legalName: '', firstName: 'Jane', lastName: 'Doe', businessAddress: '1 Main St',
+    businessEmail: 'hr@acme.test', businessPhone: '202-555-0111',
+    signatoryName: 'Jane Doe', signatoryTitle: 'HR Director'
+  });
+  assert.equal(withoutLegalName.legalName, '');
+  assert.equal((await auth.getProfile(context)).legalName, '');
+  await assert.rejects(auth.updateProfile(context, { legalName: 'x' }), /Provide valid/);
 });
 
 test('active sessions roll their expiry forward', async (t) => {

@@ -15,6 +15,8 @@
     main{width:min(1440px,calc(100% - 40px));margin:28px auto 54px}.heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:22px}.heading h1{margin:0;font-size:26px}.heading p{margin:7px 0 0;color:var(--muted)}
     .mobile-preview-trigger{display:none;padding:9px 12px;border:1px solid var(--navy2);border-radius:4px;background:#fff;color:var(--navy2);font-weight:700}
     .notice{padding:12px 15px;border:1px solid #e7d5ae;background:#fff9e9;color:#614c23;line-height:1.5;margin-bottom:18px}.notice a{color:#214d80;font-weight:700}
+    .expired-notice{display:flex;justify-content:space-between;align-items:center;gap:18px;border-color:#d98d62;background:#fff2e9;color:#713b20}.expired-actions{display:flex;flex-wrap:wrap;gap:10px}.expired-actions a{display:inline-block;padding:9px 12px;border-radius:4px;background:#973f1c;color:white;text-decoration:none;white-space:nowrap}.expired-actions a:last-child{background:#214d80}
+    .expired-notice[hidden]{display:none}
     .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:22px;align-items:start}.form-column{display:grid;gap:15px}.card,.preview-card{border:1px solid var(--line);border-radius:8px;background:white;box-shadow:0 5px 20px #1628450a}
     fieldset{margin:0;padding:20px;border:0;border-bottom:1px solid var(--line)}fieldset:last-child{border-bottom:0}legend{float:left;width:100%;margin:0 0 17px;padding:0;color:var(--navy);font-size:15px;font-weight:700}legend+*{clear:both}
     .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:grid;align-content:start;gap:6px;min-width:0}.field.wide{grid-column:1/-1}.field label,.field>span{font-size:12px;font-weight:700;color:#39475c}
@@ -29,7 +31,7 @@
     @media(min-width:1280px){main{width:min(1440px,calc(100% - 64px))}.layout{gap:26px}.form-column{gap:18px}}
     @media(min-width:768px) and (max-width:1023px){main{width:calc(100% - 32px)}.layout{gap:16px}.paper{margin:12px;padding:28px 24px}}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.mobile-preview-trigger{display:block}.preview-card{position:fixed;z-index:10;inset:10vh 12px 12px;display:none;overflow:auto}.preview-card.open{display:block}.preview-head button{display:block}}
-    @media(max-width:620px){header{height:auto;min-height:64px;padding:10px 16px;flex-wrap:wrap}header nav{width:100%;justify-content:space-between;gap:10px;padding-top:7px;border-top:1px solid #ffffff28}header nav a{font-size:12px}main{width:calc(100% - 24px);margin-top:20px}.heading{align-items:start;flex-direction:column}.heading h1{font-size:22px}.fields{grid-template-columns:1fr}.field.wide{grid-column:auto}fieldset{padding:16px}.paper{margin:8px;padding:25px 20px;min-height:550px}.preview-head{position:sticky;top:0;z-index:1}}
+    @media(max-width:620px){header{height:auto;min-height:64px;padding:10px 16px;flex-wrap:wrap}header nav{width:100%;justify-content:space-between;gap:10px;padding-top:7px;border-top:1px solid #ffffff28;flex-wrap:wrap}header nav a{font-size:12px}main{width:calc(100% - 24px);margin-top:20px}.heading{align-items:start;flex-direction:column}.heading h1{font-size:22px}.fields{grid-template-columns:1fr}.field.wide{grid-column:auto}fieldset{padding:16px}.paper{margin:8px;padding:25px 20px;min-height:550px}.preview-head{position:sticky;top:0;z-index:1}.expired-notice{align-items:flex-start;flex-direction:column}}
     @media(max-width:360px){header{padding-inline:12px}.brand img{width:32px;height:32px}header nav{gap:7px}main{width:calc(100% - 20px)}.heading h1{font-size:20px}.paper{padding:20px 15px}}
     @media print{body{background:white}.form-column,header,.heading,.notice,.preview-head,.export-actions,.app-footer{display:none!important}.layout{display:block}.preview-card{position:static;border:0;box-shadow:none}.paper{margin:0;border:0;box-shadow:none;min-height:0}}
   </style>
@@ -41,9 +43,10 @@
 <body>
   <header>
     <a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a>
-    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/verify" aria-current="page">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/login" data-signout>Sign out</a></nav>
+    <nav aria-label="Application navigation"><a href="/">Home</a><a href="/verify" aria-current="page">Create letter</a><a href="/i9">Form I-9</a><a href="/dashboard">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/select-plan">Upgrade / Add credit</a><a href="/login" data-signout>Sign out</a></nav>
   </header>
   <main>
+    <div id="subscriptionExpiredBanner" class="notice expired-notice" role="alert" hidden><div><strong>Your subscription has expired.</strong> You can review your history, but workspace actions are paused until you renew or purchase a pass.</div><div class="expired-actions"><a href="/select-plan?renew=1">Renew a plan</a><a href="https://usevs.gumroad.com/l/Single-Use?wanted=true" target="_blank" rel="noopener">Buy a 1-day pass</a></div></div>
     <div class="heading"><div><h1>Create an employment verification letter</h1><p>Complete the verified employer and employee record. Preview updates as you work.</p></div><button type="button" class="mobile-preview-trigger" id="openPreviewTop">Preview letter</button></div>
     <div class="layout">
       <form id="verifyForm" class="form-column" data-private data-hj-suppress data-fs-exclude>
@@ -121,7 +124,7 @@
             <legend>06 · Document attachments</legend>
             <div class="field"><label for="attachments">Attach pay stubs or W-2 forms</label><input id="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"><p class="attachments-note">Upload only material you own or are authorized to share. You are responsible for its legality, accuracy, and respect for others' rights. Attachments are encrypted with the record. Total upload limit: 4 MB.</p><label class="inline"><input id="contentLiabilityAccepted" type="checkbox"> I accept responsibility for the content I upload.</label></div>
           </fieldset>
-          <div class="form-actions"><button class="primary" type="submit" id="generateButton">Generate verification letter</button><p id="formStatus" class="status" role="status" aria-live="polite"></p></div>
+          <div class="form-actions"><button class="primary" type="submit" id="generateButton" disabled>Generate verification letter</button><p id="formStatus" class="status" role="status" aria-live="polite"></p></div>
         </div>
       </form>
       <aside class="preview-card" id="previewCard" aria-label="Live verification letter preview">
@@ -139,7 +142,7 @@
           <div class="signature"><span>Authorized signature</span><div id="signaturePreview"></div><strong id="previewRepresentative">[AUTHORIZED SIGNATORY NAME]</strong><br><span id="previewTitle">[TITLE]</span></div>
           <div class="qr" id="qrPreview"><span>QR verification code and audit metadata will appear after issuance.</span></div>
         </article>
-        <div class="export-actions"><button type="button" id="downloadPdf" disabled>Download PDF</button><button type="button" id="downloadDocx" disabled>Download Word</button><button type="button" id="emailLetter" disabled>Email letter</button><button type="button" id="printLetter">Print</button></div>
+        <div class="export-actions"><button type="button" id="downloadPdf" disabled>Download PDF</button><button type="button" id="downloadDocx" disabled>Download Word</button><button type="button" id="emailLetter" disabled>Email letter</button><button type="button" id="printLetter" disabled>Print</button></div>
       </aside>
     </div>
   </main>

@@ -1,7 +1,7 @@
 const form = document.getElementById('profileForm');
 const statusEl = document.getElementById('status');
 const saveButton = document.getElementById('saveProfile');
-const fields = ['legalName', 'businessAddress', 'taxId', 'businessPhone', 'businessEmail', 'signatoryName', 'signatoryTitle', 'signatoryEmail'];
+const fields = ['legalName', 'firstName', 'lastName', 'businessAddress', 'taxId', 'businessPhone', 'businessEmail', 'signatoryName', 'signatoryTitle', 'signatoryEmail'];
 
 function setStatus(message, kind) {
   statusEl.textContent = message;
