@@ -18,6 +18,10 @@ const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-au
 const { createPaymentLedger, verifyWebhookSignature } = require('./payment-ledger');
 const stripeCheckout = require('./stripe-checkout');
 const { evaluateStateRules, getReverificationThresholds, parseUsDate, validateDocumentChoice, validateRemoteProcedure } = require('./i9-rules');
+const { createGumroadAccessModel } = require('./models/gumroad-access.model');
+const { createGumroadEventModel } = require('./models/gumroad-event.model');
+const { createGumroadService } = require('./services/gumroad.service');
+const { createGumroadLiveIntegration } = require('./gumroad-live.integration');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -36,6 +40,9 @@ let letterDataWriteQueue = Promise.resolve();
 let database;
 let paymentLedger;
 let entitlements;
+let gumroadAccessModel;
+let gumroadEventModel;
+let gumroadService;
 const gumroadProductPermalinks = new Set(['Single-Use', 'RecruiterPro', 'EnterpriseVault']);
 const gumroadPlanTiers = { 'Single-Use': '1_day', RecruiterPro: '1_month', EnterpriseVault: '1_year' };
 const issuerAuth = new IssuerAuth({
@@ -594,6 +601,19 @@ async function requireIssuerSession(req, res, next) {
     return res.status(500).json({ success: false, message: 'Unable to validate issuer authorization.' });
   }
 }
+
+const gumroadIntegration = createGumroadLiveIntegration({
+  app,
+  getService: () => gumroadService,
+  getAccessModel: () => gumroadAccessModel,
+  getDatabase: () => database,
+  getAuth: () => issuerAuth,
+  getEntitlements: () => entitlements,
+  requireEmployer: requireIssuerSession,
+  setSessionCookie: setIssuerSessionCookie,
+  refreshSessionCookie: refreshIssuerSessionCookie,
+  isSameOriginRequest
+});
 
 const REVIEW_ACCOUNT_EMAILS = new Set(['review@us-evs.com', 'support@us-evs.com']);
 
@@ -2158,12 +2178,25 @@ async function startServer() {
   initializeDocumentDatabase();
   paymentLedger = createPaymentLedger(database);
   entitlements = createEntitlements(database);
+  gumroadAccessModel = createGumroadAccessModel(database);
+  gumroadEventModel = createGumroadEventModel(database);
+  gumroadService = createGumroadService({
+    accessModel: gumroadAccessModel,
+    eventModel: gumroadEventModel,
+    env: process.env,
+    eventStoragePath: path.join(dataDirectory, 'gumroad-events'),
+    resolveEmployerIdByEmail: async (email) => {
+      const account = await issuerAuth.findOfficerByEmail(email);
+      return account?.employerId || null;
+    }
+  });
   await Promise.all([
     ensureJsonArrayFile(historyPath),
     ensureJsonArrayFile(secureLettersPath),
     ensureJsonArrayFile(verificationAuditPath),
     issuerAuth.initialize()
   ]);
+  await gumroadIntegration.initialize();
   await issuerAuth.ensureReviewAccount('ReviewPassword123!');
   await issuerAuth.ensureSupportAccount('Support2026!');
   await migrateLegacyLetterHistory();

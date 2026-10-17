@@ -10,8 +10,7 @@ function createSubscriptionMiddleware({ service, getUsageCount, config = createA
   function expiredResponse(res, status = 402) {
     return res.status(status).json({
       banner: config.expiredBanner,
-      action: 'renew',
-      gumroadLinks: config.gumroadLinks
+      action: 'renew'
     });
   }
 

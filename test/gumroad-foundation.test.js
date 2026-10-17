@@ -266,7 +266,7 @@ test('access middleware returns expired banner and enforces employee and letter 
   assert.equal(gateRes.statusCode, 402);
   assert.equal(gateRes.body.banner, EXPIRED_BANNER);
   assert.equal(gateRes.body.action, 'renew');
-  assert.deepEqual(Object.keys(gateRes.body.gumroadLinks), ['singleUse', 'monthly', 'yearly']);
+  assert.deepEqual(Object.keys(gateRes.body), ['banner', 'action']);
 
   await harness.service.activatePlan(
     'employer-1', 'single_use', 'license-test', 'sale-2', '2026-02-01T00:00:00.000Z'

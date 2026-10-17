@@ -63,8 +63,10 @@ function createGumroadController({ service } = {}) {
     if (!employerId) return res.status(401).json({ success: false, message: 'Authenticated employer context is missing.' });
     try {
       const access = await service.getAccessStatus(employerId);
-      if (access.active) return res.json({ success: true, ...access });
       const config = createAppConfig();
+      if (access.active) {
+        return res.json({ success: true, ...access, gumroadLinks: config.gumroadLinks });
+      }
       return res.status(402).json({
         success: true,
         ...access,

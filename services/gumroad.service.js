@@ -35,6 +35,7 @@ function normalizeEventType(payload) {
       ['chargeback', 'chargebacked', 'dispute', 'disputed'].includes(explicit)) return 'chargeback';
   if (isTrue(payload?.refunded) || ['refund', 'refunded'].includes(explicit)) return 'refund';
   if (payload?.subscription_cancelled_at || payload?.subscription_canceled_at ||
+      isTrue(payload?.cancelled) || isTrue(payload?.canceled) ||
       ['cancel', 'cancelled', 'canceled', 'cancellation', 'subscription_cancelled', 'subscription_canceled'].includes(explicit)) {
     return 'cancellation';
   }
@@ -92,24 +93,39 @@ function createGumroadService({
   now = () => new Date(),
   eventStoragePath = path.join(process.cwd(), 'data', 'gumroad-events'),
   resolveEmployerIdByEmail,
-  analytics
+  analytics,
+  logger = console
 }) {
   if (!accessModel || !eventModel) throw new Error('Gumroad access and event models are required.');
   const config = createAppConfig(env);
-  const track = analytics || createPostHogTracker({ apiKey: env.POSTHOG_API_KEY, fetchImpl });
+  const analyticsTracker = analytics || createPostHogTracker({ apiKey: env.POSTHOG_API_KEY, fetchImpl });
+
+  async function trackEvent(event, distinctId, properties) {
+    try {
+      return await analyticsTracker(event, distinctId, properties);
+    } catch (error) {
+      logger.error(`Unable to send PostHog event "${event}":`, error);
+      return false;
+    }
+  }
 
   function mapGumroadProductToPlan(productId) {
     const entry = Object.entries(config.plans).find(([, plan]) => plan.productId && plan.productId === String(productId));
     return entry ? entry[0] : null;
   }
 
-  function createCheckoutUrl(plan, email) {
+  function createCheckoutUrl(plan, email, returnUrl) {
     const planCode = normalizePlanCode(plan);
     const address = typeof email === 'string' ? email.trim() : '';
     if (!planCode || !config.plans[planCode]?.productId) throw new Error('Choose a configured Gumroad plan.');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new Error('A valid employer email is required for checkout.');
     const url = new URL(config.plans[planCode].gumroadLink);
     url.searchParams.set('email', address);
+    if (returnUrl) {
+      const redirect = new URL(returnUrl);
+      if (!['http:', 'https:'].includes(redirect.protocol)) throw new Error('A valid payment return URL is required.');
+      url.searchParams.set('redirect_url', redirect.toString());
+    }
     return url.toString();
   }
 
@@ -206,7 +222,7 @@ function createGumroadService({
       expiresAt: activationExpiry
     });
     if (result.changed) {
-      await track('gumroad_plan_activated', employerId, {
+      await trackEvent('gumroad_plan_activated', employerId, {
         planCode,
         purchaseId: gumroadPurchaseId,
         expiresAt: result.access.expiresAt
@@ -217,13 +233,13 @@ function createGumroadService({
 
   async function expirePlan(employerId) {
     const changed = accessModel.setStatus(employerId, 'expired');
-    if (changed) await track('gumroad_plan_expired', employerId, {});
+    if (changed) await trackEvent('gumroad_plan_expired', employerId, {});
     return changed;
   }
 
   async function revokePlan(employerId, purchaseId) {
     const changed = accessModel.setStatus(employerId, 'revoked', purchaseId);
-    if (changed) await track('gumroad_plan_revoked', employerId, { purchaseId: purchaseId || null });
+    if (changed) await trackEvent('gumroad_plan_revoked', employerId, { purchaseId: purchaseId || null });
     return changed;
   }
 
@@ -321,7 +337,7 @@ function createGumroadService({
     mapGumroadProductToPlan,
     recordGumroadEvent,
     revokePlan,
-    trackEvent: track,
+    trackEvent,
     verifyLicenseWithGumroadAPI
   };
 }
