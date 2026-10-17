@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Processing subscription | US-EVS</title>
+</head>
+<body>
+  <main>
+    <h1>Processing your subscription…</h1>
+    <p id="status" role="status">Waiting for Gumroad to confirm your payment.</p>
+  </main>
+  <script>
+    (function removeHandoffToken() {
+      window.history.replaceState(null, '', '/payment-success');
+    })();
+    (async function waitForActivation() {
+      const status = document.getElementById('status');
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        try {
+          const response = await fetch('/api/gumroad/access', { credentials: 'same-origin', cache: 'no-store' });
+          const access = await response.json();
+          if (access.active) {
+            status.textContent = 'Subscription activated. Redirecting…';
+            window.location.replace('/create-letter');
+            return;
+          }
+          status.textContent = 'Payment confirmation is still processing. This page will continue checking.';
+        } catch {
+          status.textContent = 'Unable to check payment status. Retrying…';
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      status.textContent = 'Payment confirmation is taking longer than expected. Refresh this page or return to your plan selection.';
+    })();
+  </script>
+</body>
+</html>

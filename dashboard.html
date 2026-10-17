@@ -30,6 +30,7 @@
 <body>
   <header><a class="brand" href="/"><img src="/public/us-evs-mark.svg" alt=""><span><strong>US-EVS</strong><small>US EMPLOYMENT VERIFICATION SYSTEM</small></span></a><nav><a href="/">Home</a><a href="/verify" data-paid-action>Create letter</a><a href="/i9" data-paid-action>Form I-9</a><a href="/dashboard" aria-current="page">History</a><a href="/public-verify">Verify ID</a><a href="/account">Account</a><a href="/select-plan">Upgrade / Add credit</a><a href="/login" data-signout>Sign out</a></nav></header>
   <main>
+    <p data-auth-account-email hidden aria-live="polite"></p>
     <div id="paymentBanner" class="notice" role="status" hidden style="background:#e5f3ea;border-color:#b8dcc5;color:#286440"><strong>Payment successful!</strong> Your workspace is active and credits have been credited.</div>
     <div id="subscriptionExpiredBanner" class="notice expired-notice" role="alert" hidden><div><strong>Your subscription has expired.</strong> You can review your history, but workspace actions are paused until you renew or purchase a pass.</div><div class="expired-actions"><a href="/select-plan?renew=1">Renew a plan</a><a href="https://usevs.gumroad.com/l/Single-Use?wanted=true" target="_blank" rel="noopener">Buy a 1-day pass</a></div></div>
     <script>if (new URLSearchParams(location.search).get('payment') === 'success') document.getElementById('paymentBanner').hidden = false;</script>

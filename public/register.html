@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Create an account | US-EVS</title>
+  <style>
+    body { margin: 0; background: #0b1329; color: #f8fafc; font: 16px Arial, sans-serif; }
+    main { width: min(100% - 32px, 520px); margin: 6vh auto; padding: 28px; background: #14213d; border: 1px solid #334155; border-radius: 12px; }
+    h1 { margin-top: 0; }
+    label { display: grid; gap: 7px; margin: 14px 0; font-weight: 700; }
+    input, button, .provider { box-sizing: border-box; width: 100%; min-height: 44px; padding: 11px; border-radius: 6px; font: inherit; }
+    input { border: 1px solid #64748b; }
+    button { border: 0; color: white; background: #f97316; font-weight: 700; cursor: pointer; }
+    .provider { display: block; margin: 10px 0; border: 1px solid #64748b; color: #f8fafc; text-align: center; text-decoration: none; }
+    #status { min-height: 1.5em; color: #fecaca; }
+    a { color: #fdba74; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Create your employer account</h1>
+    <p>Register once, then choose a US-EVS access plan.</p>
+    <form id="registerForm">
+      <label>Full name<input name="fullName" autocomplete="name" required maxlength="160"></label>
+      <label>Email<input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></label>
+      <label>Organization<input name="organization" autocomplete="organization" required maxlength="200"></label>
+      <label id="passwordLabel">Password (12 characters minimum)<input id="password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128"></label>
+      <input id="plan" name="plan" type="hidden">
+      <button type="submit">Create account and choose a plan</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </form>
+    <a class="provider" href="/api/auth/google/start">Continue with Google</a>
+    <a class="provider" href="/api/auth/apple/start">Continue with Apple</a>
+    <p>Already have an account? <a href="/login">Sign in</a> · Existing issuer accounts can <a href="/auth">sign in here</a> before linking.</p>
+  </main>
+  <script>
+    const form = document.getElementById('registerForm');
+    const email = document.getElementById('email');
+    const params = new URLSearchParams(location.search);
+    const completion = params.get('complete') === '1';
+    const requestedEmail = params.get('email');
+    const plan = params.get('plan');
+    if (['1day', 'monthly', 'yearly'].includes(plan)) document.getElementById('plan').value = plan;
+    if (completion && requestedEmail) {
+      email.value = requestedEmail;
+      email.readOnly = true;
+      document.getElementById('password').required = false;
+      document.getElementById('passwordLabel').firstChild.textContent = 'Set a password (optional; 12 characters minimum)';
+    }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = form.querySelector('button');
+      const status = document.getElementById('status');
+      button.disabled = true;
+      status.textContent = 'Creating your account…';
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to create your account.');
+        location.assign(result.redirectTo || '/select-plan');
+      } catch (failure) {
+        status.textContent = failure.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

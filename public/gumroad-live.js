@@ -19,6 +19,19 @@
   });
 
   if (window.location.pathname === '/payment-success') return;
+  fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' })
+    .then(async (response) => response.ok ? response.json() : null)
+    .then((session) => {
+      const main = document.querySelector('main');
+      if (!session?.account?.email || !main) return;
+      const identity = document.querySelector('[data-auth-account-email]') || document.createElement('p');
+      if (!identity.hasAttribute('data-auth-account-email')) identity.setAttribute('data-auth-account-email', '');
+      identity.textContent = `Signed in as ${session.account.email}`;
+      identity.hidden = false;
+      if (!identity.isConnected) main.prepend(identity);
+    })
+    .catch((error) => console.error('Unable to load signed-in account:', error));
+
   fetch('/api/gumroad/access', { credentials: 'same-origin', cache: 'no-store' })
     .then(async (response) => {
       if (response.status === 401 || response.status === 403) return null;

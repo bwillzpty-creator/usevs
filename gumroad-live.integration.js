@@ -17,14 +17,19 @@ function createGumroadLiveIntegration({
   getEntitlements,
   requireEmployer,
   setSessionCookie,
-  refreshSessionCookie,
+  getAuthService,
+  resolveAuthAccount,
+  setAuthSessionCookie,
   isSameOriginRequest = () => true,
   logger = console
 }) {
   if (!app || typeof app.use !== 'function') throw new Error('An Express application is required.');
   if (typeof getService !== 'function' || typeof getAccessModel !== 'function' ||
       typeof getDatabase !== 'function' || typeof getAuth !== 'function' ||
-      typeof getEntitlements !== 'function' || typeof requireEmployer !== 'function') {
+      typeof getEntitlements !== 'function' || typeof requireEmployer !== 'function' ||
+      (getAuthService && typeof getAuthService !== 'function') ||
+      (resolveAuthAccount && typeof resolveAuthAccount !== 'function') ||
+      (setAuthSessionCookie && typeof setAuthSessionCookie !== 'function')) {
     throw new Error('Gumroad integration dependencies and employer-session middleware are required.');
   }
 
@@ -92,15 +97,16 @@ function createGumroadLiveIntegration({
 
   async function initialize() {
     getDatabase().exec(`
-      CREATE TABLE IF NOT EXISTS gumroad_checkout_handoffs (
+      CREATE TABLE IF NOT EXISTS gumroad_auth_checkout_handoffs (
         token_hash TEXT PRIMARY KEY,
-        employer_id TEXT NOT NULL,
-        officer_id TEXT NOT NULL,
+        account_id TEXT,
+        employer_id TEXT,
+        officer_id TEXT,
         expires_at TEXT NOT NULL,
         consumed_at TEXT
       );
-      CREATE INDEX IF NOT EXISTS gumroad_checkout_handoffs_by_expiry
-        ON gumroad_checkout_handoffs(expires_at);
+      CREATE INDEX IF NOT EXISTS gumroad_auth_checkout_handoffs_by_expiry
+        ON gumroad_auth_checkout_handoffs(expires_at);
     `);
     const auth = getAuth();
     const store = await auth.readStore();
@@ -196,10 +202,10 @@ function createGumroadLiveIntegration({
     const now = new Date();
     const expiresAt = new Date(now.getTime() + HANDOFF_LIFETIME_MS).toISOString();
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    getDatabase().prepare('DELETE FROM gumroad_checkout_handoffs WHERE expires_at <= ?').run(now.toISOString());
-    getDatabase().prepare(`INSERT INTO gumroad_checkout_handoffs
-      (token_hash, employer_id, officer_id, expires_at) VALUES (?, ?, ?, ?)`)
-      .run(tokenHash, context.employer.id, context.officer.id, expiresAt);
+    getDatabase().prepare('DELETE FROM gumroad_auth_checkout_handoffs WHERE expires_at <= ?').run(now.toISOString());
+    getDatabase().prepare(`INSERT INTO gumroad_auth_checkout_handoffs
+      (token_hash, account_id, employer_id, officer_id, expires_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(tokenHash, context.accountId || null, context.employer?.id || null, context.officer?.id || null, expiresAt);
     return token;
   }
 
@@ -210,14 +216,15 @@ function createGumroadLiveIntegration({
     const now = new Date().toISOString();
     database.exec('BEGIN IMMEDIATE');
     try {
-      const handoff = database.prepare(`SELECT employer_id AS employerId, officer_id AS officerId
-        FROM gumroad_checkout_handoffs WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?`)
+      const handoff = database.prepare(`SELECT account_id AS accountId, employer_id AS employerId,
+        officer_id AS officerId
+        FROM gumroad_auth_checkout_handoffs WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?`)
         .get(tokenHash, now);
       if (!handoff) {
         database.exec('COMMIT');
         return null;
       }
-      const updated = database.prepare(`UPDATE gumroad_checkout_handoffs SET consumed_at = ?
+      const updated = database.prepare(`UPDATE gumroad_auth_checkout_handoffs SET consumed_at = ?
         WHERE token_hash = ? AND consumed_at IS NULL`).run(now, tokenHash);
       database.exec('COMMIT');
       return updated.changes === 1 ? handoff : null;
@@ -256,7 +263,6 @@ function createGumroadLiveIntegration({
       const context = await getAuth().getSession(req);
       res.setHeader('Cache-Control', 'no-store');
       if (!context) return res.redirect(`/register?plan=${encodeURIComponent(String(req.query.plan || ''))}`);
-      if (typeof refreshSessionCookie === 'function') refreshSessionCookie(req, res);
       const planCode = normalizePlanCode(req.query.plan);
       if (!planCode) return res.status(400).send('Choose a valid subscription plan.');
       const origin = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
@@ -284,45 +290,27 @@ function createGumroadLiveIntegration({
       if (!context && req.query.handoff) {
         const handoff = consumeCheckoutHandoff(req.query.handoff);
         if (handoff) {
-          const session = await getAuth().issueSession(handoff.employerId, handoff.officerId);
-          if (typeof setSessionCookie === 'function') setSessionCookie(res, session.token, req);
-          context = session;
+          if (handoff.accountId && getAuthService && setAuthSessionCookie && resolveAuthAccount) {
+            const account = await getAuthService().findAccountById(handoff.accountId);
+            if (!account) throw new Error('Checkout account no longer exists.');
+            const session = await getAuthService().createSession(account.id);
+            setAuthSessionCookie(res, session.sessionToken, req);
+            context = await resolveAuthAccount(account);
+          } else if (handoff.employerId && handoff.officerId) {
+            const session = await getAuth().issueSession(handoff.employerId, handoff.officerId);
+            if (typeof setSessionCookie === 'function') setSessionCookie(res, session.token, req);
+            context = session;
+          }
         }
       }
       if (!context) return res.redirect(`/login?next=${encodeURIComponent('/payment-success')}`);
-      if (typeof refreshSessionCookie === 'function') refreshSessionCookie(req, res);
       try {
         await getService().trackEvent('gumroad_payment_success_page_loaded', context.employer.id, {});
       } catch (error) {
         logger.error('Unable to record Gumroad payment-success analytics:', error);
       }
-      return res.type('html').send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Processing subscription | US-EVS</title></head>
-<body><main><h1>Processing your subscription…</h1><p id="status" role="status">Waiting for Gumroad to confirm your payment.</p></main>
-<script>
-(function removeHandoffToken() {
-  window.history.replaceState(null, '', '/payment-success');
-})();
-(async function () {
-  const status = document.getElementById('status');
-  for (let attempt = 0; attempt < 90; attempt += 1) {
-    try {
-      const response = await fetch('/api/gumroad/access', { credentials: 'same-origin', cache: 'no-store' });
-      const access = await response.json();
-      if (access.active) {
-        status.textContent = 'Subscription activated. Redirecting…';
-        window.location.replace('/create-letter');
-        return;
-      }
-      status.textContent = 'Payment confirmation is still processing. This page will continue checking.';
-    } catch {
-      status.textContent = 'Unable to check payment status. Retrying…';
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  status.textContent = 'Payment confirmation is taking longer than expected. Refresh this page or return to your plan selection.';
-})();
-</script></body></html>`);
+      const pagePath = path.join(__dirname, 'public', 'payment-success.html');
+      return res.type('html').send(await fs.readFile(pagePath, 'utf8'));
     } catch (error) {
       logger.error('Unable to load Gumroad payment-success page:', error);
       return res.status(503).send('Unable to check payment status. Please try again.');

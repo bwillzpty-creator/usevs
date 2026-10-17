@@ -22,6 +22,12 @@ const { createGumroadAccessModel } = require('./models/gumroad-access.model');
 const { createGumroadEventModel } = require('./models/gumroad-event.model');
 const { createGumroadService } = require('./services/gumroad.service');
 const { createGumroadLiveIntegration } = require('./gumroad-live.integration');
+const { createAuthAccountModel } = require('./models/auth-account.model');
+const { createAuthSessionModel } = require('./models/auth-session.model');
+const { createAuthService } = require('./services/auth.service');
+const { createProviderOAuthService } = require('./services/provider-oauth.service');
+const { createAuthLiveIntegration } = require('./auth-live.integration');
+const { createAuthSessionMiddleware } = require('./middleware/auth-session.middleware');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -43,6 +49,9 @@ let entitlements;
 let gumroadAccessModel;
 let gumroadEventModel;
 let gumroadService;
+let authService;
+let authAccountModel;
+let authSessionModel;
 const gumroadProductPermalinks = new Set(['Single-Use', 'RecruiterPro', 'EnterpriseVault']);
 const gumroadPlanTiers = { 'Single-Use': '1_day', RecruiterPro: '1_month', EnterpriseVault: '1_year' };
 const issuerAuth = new IssuerAuth({
@@ -570,12 +579,26 @@ function isSecureRequest(req) {
 
 function setIssuerSessionCookie(res, token, req) {
   const secure = isSecureRequest(req) ? '; Secure' : '';
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_LIFETIME_MS / 1000)}${secure}`);
+  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_LIFETIME_MS / 1000)}${secure}`;
+  const current = res.getHeader('Set-Cookie');
+  res.setHeader('Set-Cookie', current ? [...(Array.isArray(current) ? current : [current]), cookie] : cookie);
 }
+
+const foundationSessionMiddleware = createAuthSessionMiddleware({
+  authService: new Proxy({}, {
+    get(_target, property) {
+      if (!authService) throw new Error('Foundation auth service is not initialized.');
+      const value = authService[property];
+      return typeof value === 'function' ? value.bind(authService) : value;
+    }
+  })
+});
 
 function clearIssuerSessionCookie(res, req) {
   const secure = isSecureRequest(req) ? '; Secure' : '';
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
+  const cookie = `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`;
+  const current = res.getHeader('Set-Cookie');
+  res.setHeader('Set-Cookie', current ? [...(Array.isArray(current) ? current : [current]), cookie] : cookie);
 }
 
 // getSession extends the server-side expiry; re-send the cookie so the browser's Max-Age rolls forward too.
@@ -602,16 +625,31 @@ async function requireIssuerSession(req, res, next) {
   }
 }
 
-const gumroadIntegration = createGumroadLiveIntegration({
+let gumroadIntegration;
+let authIntegration;
+
+authIntegration = createAuthLiveIntegration({
+  app,
+  getAuthService: () => authService,
+  getProviderOAuth: () => createProviderOAuthService({ env: process.env }),
+  getDatabase: () => database,
+  employerAuth: issuerAuth,
+  rememberEmployer: (...args) => gumroadIntegration?.rememberEmployer(...args),
+  isSameOriginRequest
+});
+
+gumroadIntegration = createGumroadLiveIntegration({
   app,
   getService: () => gumroadService,
   getAccessModel: () => gumroadAccessModel,
   getDatabase: () => database,
   getAuth: () => issuerAuth,
+  getAuthService: () => authService,
+  resolveAuthAccount: (account) => authIntegration.resolveAccountToEmployer(account),
   getEntitlements: () => entitlements,
   requireEmployer: requireIssuerSession,
   setSessionCookie: setIssuerSessionCookie,
-  refreshSessionCookie: refreshIssuerSessionCookie,
+  setAuthSessionCookie: foundationSessionMiddleware.setSessionCookie,
   isSameOriginRequest
 });
 
@@ -2180,6 +2218,9 @@ async function startServer() {
   entitlements = createEntitlements(database);
   gumroadAccessModel = createGumroadAccessModel(database);
   gumroadEventModel = createGumroadEventModel(database);
+  authAccountModel = createAuthAccountModel(database);
+  authSessionModel = createAuthSessionModel(database);
+  authService = createAuthService({ accountModel: authAccountModel, sessionModel: authSessionModel });
   gumroadService = createGumroadService({
     accessModel: gumroadAccessModel,
     eventModel: gumroadEventModel,
@@ -2196,6 +2237,7 @@ async function startServer() {
     ensureJsonArrayFile(verificationAuditPath),
     issuerAuth.initialize()
   ]);
+  await authIntegration.initialize();
   await gumroadIntegration.initialize();
   await issuerAuth.ensureReviewAccount('ReviewPassword123!');
   await issuerAuth.ensureSupportAccount('Support2026!');

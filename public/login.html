@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Sign in | US-EVS</title>
+  <style>
+    body { margin: 0; background: #0b1329; color: #f8fafc; font: 16px Arial, sans-serif; }
+    main { width: min(100% - 32px, 440px); margin: 8vh auto; padding: 28px; background: #14213d; border: 1px solid #334155; border-radius: 12px; }
+    h1 { margin-top: 0; }
+    label { display: grid; gap: 7px; margin: 16px 0; font-weight: 700; }
+    input, button, .provider { box-sizing: border-box; width: 100%; min-height: 44px; padding: 11px; border-radius: 6px; font: inherit; }
+    input { border: 1px solid #64748b; }
+    button { border: 0; color: white; background: #f97316; font-weight: 700; cursor: pointer; }
+    .provider { display: block; margin: 10px 0; border: 1px solid #64748b; color: #f8fafc; text-align: center; text-decoration: none; }
+    #status { min-height: 1.5em; color: #fecaca; }
+    a { color: #fdba74; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Sign in</h1>
+    <p>Access your employer verification workspace.</p>
+    <form id="loginForm">
+      <label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+      <label id="otpLabel" hidden>One-time sign-in code<input id="otpCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
+      <button type="submit">Sign in</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </form>
+    <a class="provider" href="/api/auth/google/start">Continue with Google</a>
+    <a class="provider" href="/api/auth/apple/start">Continue with Apple</a>
+    <p>New to US-EVS? <a href="/register">Create an account</a></p>
+  </main>
+  <script>
+    const form = document.getElementById('loginForm');
+    const status = document.getElementById('status');
+    let challengeId = '';
+    const error = new URLSearchParams(location.search).get('provider_error');
+    if (error) status.textContent = 'Provider sign-in could not be completed. Please try again.';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = form.querySelector('button');
+      button.disabled = true;
+      status.textContent = 'Signing in…';
+      try {
+        const response = await fetch(challengeId ? '/api/auth/otp' : '/api/auth/login', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(challengeId
+            ? { challengeId, code: document.getElementById('otpCode').value }
+            : Object.fromEntries(new FormData(form)))
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to sign in.');
+        if (result.challengeId) {
+          challengeId = result.challengeId;
+          document.getElementById('otpLabel').hidden = false;
+          status.textContent = result.message || 'Enter the one-time code sent to your email.';
+          return;
+        }
+        location.assign(result.redirectTo || '/dashboard');
+      } catch (failure) {
+        status.textContent = failure.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
