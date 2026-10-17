@@ -34,8 +34,7 @@ test('legacy accounts with differently cased stored emails can still sign in', a
   const messages = [];
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
-    emailTransport: { sendMail: async (message) => messages.push(message) },
-    emailFrom: 'verification@example.test',
+    emailMailer: { sendEmail: async (message) => messages.push(message) },
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
   });
   await auth.initialize();
@@ -106,18 +105,16 @@ test('expired subscriptions retain history access status without workspace acces
   assert.equal(withCredit.subscriptionExpired, false);
 });
 
-test('welcome and payment emails use the US-EVS Support sender', async (t) => {
+test('welcome and payment emails are sent through the configured mailer', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-mail-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const messages = [];
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
-    emailTransport: { sendMail: async (message) => messages.push(message) },
-    emailFrom: 'no-reply@us-evs.com',
+    emailMailer: { sendEmail: async (message) => messages.push(message) },
     publicBaseUrl: 'https://us-evs.com'
   });
   await auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' });
-  assert.equal(messages[0].from, '"US-EVS Support" <no-reply@us-evs.com>');
   assert.match(messages[0].subject, /Registration Successful/);
   assert.match(messages[0].text, /sam@acme\.example/);
   assert.match(messages[0].text, /https:\/\/us-evs\.com\/select-plan/);
@@ -126,18 +123,16 @@ test('welcome and payment emails use the US-EVS Support sender', async (t) => {
   assert.match(messages[1].text, /\/login/);
 });
 
-test('welcome email SMTP failure does not reject account registration flow', async (t) => {
+test('welcome email failures are reported to the caller', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-welcome-failure-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
-    emailTransport: { sendMail: async () => { throw new Error('Connection timeout'); } },
-    emailFrom: 'no-reply@us-evs.com',
+    emailMailer: { sendEmail: async () => { throw new Error('Brevo API failure'); } },
     publicBaseUrl: 'https://us-evs.com'
   });
 
-  await assert.doesNotReject(auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' }));
-  await new Promise((resolve) => setImmediate(resolve));
+  await assert.rejects(auth.sendWelcomeEmail({ email: 'sam@acme.example', fullName: 'Sam Lee' }), /Brevo email delivery failed/);
 });
 
 test('stripe webhook signatures and paid-session checks', () => {

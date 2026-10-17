@@ -9,7 +9,7 @@ Set these as protected environment variables in the deployment platform or local
 - `PUBLIC_BASE_URL`: canonical HTTPS origin for your Linode-hosted domain, such as `https://your-domain.example`.
 - `DATA_ENCRYPTION_KEY`: 32 random bytes encoded as Base64. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` and keep a protected backup. Losing this key makes retained letters and pending business documents unreadable.
 - `ISSUER_REVIEW_TOKEN`: at least 32 random characters, generated with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`, used only by the business reviewer API.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`: working SMTP settings for employer confirmation and HR one-time codes.
+- `BREVO_API_KEY`: a private Brevo API key with transactional email access. Email is sent using the verified sender `No-reply@us-evs.com`.
 - `BUSINESS_POSTAL_ADDRESS`: the real physical mailing address to include in transactional email footers. Email delivery is blocked until this is configured.
 - `PAYMENT_WEBHOOK_SECRET`: a high-entropy secret shared with the future payment provider for HMAC-SHA256 webhook verification. Payment initiation currently records intent only and does not charge a payment method.
 - `DATA_DIR`: a private, durable directory or mounted persistent volume for account records, encrypted letters, and audit logs.
@@ -25,7 +25,7 @@ On Linode, use a persistent directory such as `/var/lib/usevs` for `DATA_DIR`. T
 1. Create an Ubuntu Linode and point your domain's DNS record to its public IP address. Install Node.js 22.13 or newer, npm, and Nginx; check `node --version` before installing the application.
 2. Check out this repository on the server (for example, in `/opt/usevs`) and install production dependencies with `npm ci --omit=dev`.
 3. Create a dedicated `usevs` system account and the persistent data directory `/var/lib/usevs`; make the data directory writable by that account. The application stores its SQLite database, account records, encrypted letters, and audit logs there.
-4. Create `/etc/usevs/usevs.env`, readable only by root, with the environment values below. Keep SMTP credentials, `DATA_ENCRYPTION_KEY`, and `ISSUER_REVIEW_TOKEN` private. Generate fresh encryption and review tokens for a new production environment; preserve existing values when migrating an existing deployment.
+4. Create `/etc/usevs/usevs.env`, readable only by root, with the environment values below. Keep the Brevo API key, `DATA_ENCRYPTION_KEY`, and `ISSUER_REVIEW_TOKEN` private. Generate fresh encryption and review tokens for a new production environment; preserve existing values when migrating an existing deployment.
 5. Configure a systemd service to run `npm start` from the application directory as the `usevs` account, loading `/etc/usevs/usevs.env` with `EnvironmentFile`. Enable and start the service, and confirm it listens on port `8080`.
 6. Configure Nginx to proxy HTTPS requests for your domain to `http://127.0.0.1:8080`, and provision a TLS certificate. Set `PUBLIC_BASE_URL` to the exact HTTPS origin and verify that `https://your-domain.example/landing` responds successfully before enabling issuance.
 
@@ -36,12 +36,7 @@ NODE_ENV=production
 DATA_DIR=/var/lib/usevs
 PORT=8080
 PUBLIC_BASE_URL=https://your-domain.example
-SMTP_HOST=<SMTP host>
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=<SMTP username>
-SMTP_PASS=<SMTP password>
-SMTP_FROM=<sender email>
+BREVO_API_KEY=<Brevo API key>
 BUSINESS_POSTAL_ADDRESS=<real physical mailing address>
 PAYMENT_WEBHOOK_SECRET=<payment provider webhook secret>
 DATA_ENCRYPTION_KEY=<existing or newly generated 32-byte Base64 key>

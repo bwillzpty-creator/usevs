@@ -7,13 +7,13 @@ const express = require('express');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
 const { DatabaseSync } = require('node:sqlite');
 const QRCode = require('qrcode');
-const { ZipArchive } = require('archiver');
+const archiver = require('archiver');
 const { Document, Footer, ImageRun, Packer, Paragraph, TextRun } = require('docx');
 const { createPdfBuffer } = require('./letter-pdf');
 const { createVerificationParagraphs } = require('./letter-template');
+const { createBrevoMailer } = require('./brevo-mailer');
 const { IssuerAuth, SESSION_COOKIE, SESSION_LIFETIME_MS } = require('./issuer-auth');
 const { createPaymentLedger, verifyWebhookSignature } = require('./payment-ledger');
 const stripeCheckout = require('./stripe-checkout');
@@ -29,18 +29,7 @@ const secureLettersPath = path.join(dataDirectory, 'secure_letters.json');
 const verificationAuditPath = path.join(dataDirectory, 'verification_audit.json');
 const issuerAccountsPath = path.join(dataDirectory, 'issuer_accounts.json');
 const documentDatabasePath = path.join(dataDirectory, 'usevs.sqlite');
-const smtpPort = Number(process.env.SMTP_PORT || 587);
-const emailFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
-const emailTransport = process.env.SMTP_HOST && emailFrom && Number.isInteger(smtpPort)
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: smtpPort,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: process.env.SMTP_USER && process.env.SMTP_PASS
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        : undefined
-    })
-  : null;
+const emailMailer = createBrevoMailer({ apiKey: process.env.BREVO_API_KEY });
 let referenceSequence = 0;
 let historyWriteQueue = Promise.resolve();
 let letterDataWriteQueue = Promise.resolve();
@@ -52,8 +41,7 @@ const gumroadPlanTiers = { 'Single-Use': '1_day', RecruiterPro: '1_month', Enter
 const issuerAuth = new IssuerAuth({
   storePath: issuerAccountsPath,
   encryptionKey: process.env.DATA_ENCRYPTION_KEY,
-  emailTransport,
-  emailFrom,
+  emailMailer,
   publicBaseUrl: process.env.PUBLIC_BASE_URL,
   reviewToken: process.env.ISSUER_REVIEW_TOKEN,
   businessPostalAddress: process.env.BUSINESS_POSTAL_ADDRESS,
@@ -65,17 +53,9 @@ const issuerAuth = new IssuerAuth({
     : ''
 });
 
-function sendEmailNonBlocking(message, label) {
-  if (!emailTransport) return;
-  queueMicrotask(() => {
-    try {
-      Promise.resolve(emailTransport.sendMail(message)).catch((error) => {
-        console.warn(`[Email] Unable to send ${label}:`, error?.message || error);
-      });
-    } catch (error) {
-      console.warn(`[Email] Unable to send ${label}:`, error?.message || error);
-    }
-  });
+async function sendEmail(message) {
+  if (!emailMailer) throw new Error('Brevo email delivery is not configured; set BREVO_API_KEY.');
+  return emailMailer.sendEmail(message);
 }
 
 async function ensureJsonArrayFile(filePath) {
@@ -198,7 +178,13 @@ async function readJsonArray(filePath, label) {
   return value;
 }
 
-function appendJsonArray(filePath, label, queueName, entry) {
+function enqueueLetterDataWrite(operation) {
+  const pending = letterDataWriteQueue.then(operation, operation);
+  letterDataWriteQueue = pending.catch(() => {});
+  return pending;
+}
+
+function appendJsonArray(filePath, label, entry) {
   const writeEntry = async () => {
     const entries = await readJsonArray(filePath, label);
     entries.push(entry);
@@ -206,9 +192,7 @@ function appendJsonArray(filePath, label, queueName, entry) {
     await fs.writeFile(temporaryPath, `${JSON.stringify(entries, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
     await fs.rename(temporaryPath, filePath);
   };
-  const pending = letterDataWriteQueue.then(writeEntry, writeEntry);
-  letterDataWriteQueue = pending.catch(() => {});
-  return pending;
+  return enqueueLetterDataWrite(writeEntry);
 }
 
 function allocateReferenceNumber() {
@@ -229,9 +213,7 @@ function allocateReferenceNumber() {
     }
     throw new Error('No verification references are available for this year.');
   };
-  const pending = letterDataWriteQueue.then(allocate, allocate);
-  letterDataWriteQueue = pending.catch(() => {});
-  return pending;
+  return enqueueLetterDataWrite(allocate);
 }
 
 function purgeExpiredEmployeeData() {
@@ -281,9 +263,7 @@ function purgeExpiredEmployeeData() {
     }
   };
 
-  const pending = letterDataWriteQueue.then(purge, purge);
-  letterDataWriteQueue = pending.catch(() => {});
-  return pending;
+  return enqueueLetterDataWrite(purge);
 }
 
 async function migrateLegacyLetterHistory() {
@@ -752,15 +732,18 @@ async function processI9ExpirationAlerts() {
     if (!record) continue;
     if (alert.thresholdDays === 90 || alert.thresholdDays === 60 || alert.thresholdDays === 30) createSection3Draft(record);
     const employer = store.employers.find((entry) => entry.id === alert.employerId && entry.status === 'verified');
-    if (!emailTransport || !employer?.businessEmail) continue;
-    sendEmailNonBlocking({
-      from: emailFrom,
-      to: employer.businessEmail,
-      subject: `Work authorization expires within ${alert.thresholdDays} days`,
-      text: `Work authorization record ${record.recordId} expires on ${record.authorizationExpiration}. Sign in at ${process.env.PUBLIC_BASE_URL || ''}/i9 and review the employee's Supplement B (formerly Section 3) worksheet. Complete the current USCIS form before the expiration date.${issuerAuth.optionalFooter()}`
-    }, 'I-9 reverification notice');
-    database.prepare('UPDATE i9_reverification_alerts SET sent_at = ? WHERE alert_id = ? AND sent_at IS NULL').run(nowIso, alert.alertId);
-    appendI9AuditEvent(alert.recordId, alert.employerId, 'system', 'reverification_notice_sent', { thresholdDays: alert.thresholdDays });
+    if (!emailMailer || !employer?.businessEmail) continue;
+    try {
+      await sendEmail({
+        to: employer.businessEmail,
+        subject: `Work authorization expires within ${alert.thresholdDays} days`,
+        text: `Work authorization record ${record.recordId} expires on ${record.authorizationExpiration}. Sign in at ${process.env.PUBLIC_BASE_URL || ''}/i9 and review the employee's Supplement B (formerly Section 3) worksheet. Complete the current USCIS form before the expiration date.${issuerAuth.optionalFooter()}`
+      });
+      database.prepare('UPDATE i9_reverification_alerts SET sent_at = ? WHERE alert_id = ? AND sent_at IS NULL').run(nowIso, alert.alertId);
+      appendI9AuditEvent(alert.recordId, alert.employerId, 'system', 'reverification_notice_sent', { thresholdDays: alert.thresholdDays });
+    } catch (error) {
+      console.error('[Brevo] Unable to send I-9 reverification notice:', error);
+    }
   }
 }
 
@@ -1035,7 +1018,7 @@ app.get('/api/i9/audit-export', requireIssuerSession, requireActiveWorkspaceAcce
         draft: JSON.parse(issuerAuth.decryptRetainedSensitive(JSON.parse(draft.encryptedDraft))),
         createdAt: draft.createdAt
       }));
-    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
     archive.on('error', (error) => {
       console.error('I-9 audit ZIP failed:', error);
       res.destroy(error);
@@ -1260,13 +1243,9 @@ app.post('/api/auth/login', async (req, res) => {
   if (!requireSameOrigin(req, res)) return;
   try {
     const challenge = await issuerAuth.beginSignIn(req.body?.email, req.body?.password, req.ip);
-    // If qaOnly is true, email delivery was bypassed (QA mode or support account).
-    // Complete sign-in immediately with the known code instead of requiring OTP entry.
+    // Complete sign-in immediately only for the explicitly configured development QA account.
     if (challenge.qaOnly) {
-      // Support account without email transport uses static code 000000
-      // QA OTP account uses the configured qaOtpCode
-      const code = req.body.email === 'support@us-evs.com' ? '000000' : (issuerAuth.qaOtpCode || '000000');
-      const result = await issuerAuth.completeSignIn(challenge.challengeId, code);
+      const result = await issuerAuth.completeSignIn(challenge.challengeId, issuerAuth.qaOtpCode);
       setIssuerSessionCookie(res, result.token, req);
       const access = getContextAccess(result);
       const redirectTo = access.hasAccess || access.everPurchased ? '/dashboard' : '/select-plan?required=1';
@@ -1274,7 +1253,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
     return res.json({ success: true, ...challenge, message: 'A one-time code was sent to the signatory corporate email.' });
   } catch (error) {
-    const unavailable = /not configured/.test(error.message);
+    const unavailable = /not configured|delivery failed/i.test(error.message);
     return res.status(unavailable ? 503 : 401).json({ success: false, message: error.message });
   }
 });
@@ -1561,22 +1540,26 @@ app.post('/send-email', async (req, res) => {
   if (!/^[A-Z]{2,5}$/.test(entry.digitalInitials || '')) {
     return res.status(403).json({ success: false, message: 'This record has no page initials and cannot be delivered as a PDF.' });
   }
-  if (!emailTransport) {
-    return res.status(503).json({ success: false, message: 'Email delivery is not configured' });
+  if (!emailMailer) {
+    return res.status(503).json({ success: false, message: 'Brevo email delivery is not configured.' });
   }
 
-  sendEmailNonBlocking({
-    from: emailFrom,
-    to: recipient,
-    subject: 'Employment Verification Letter',
-    text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}${issuerAuth.optionalFooter()}`,
-    attachments: [{
-      filename: 'employment_verification_letter.pdf',
-      content: createPdfBuffer(entry.letter, undefined, entry.digitalInitials),
-      contentType: 'application/pdf'
-    }]
-  }, 'verification letter');
-  return res.json({ success: true, message: 'Email queued for delivery' });
+  try {
+    await sendEmail({
+      to: recipient,
+      subject: 'Employment Verification Letter',
+      text: `Please find the employment verification letter attached.\n\nReference Number: ${entry.referenceNumber}\nGenerated: ${entry.timestamp}${issuerAuth.optionalFooter()}`,
+      attachments: [{
+        filename: 'employment_verification_letter.pdf',
+        content: createPdfBuffer(entry.letter, undefined, entry.digitalInitials),
+        contentType: 'application/pdf'
+      }]
+    });
+    return res.json({ success: true, message: 'Email delivered successfully.' });
+  } catch (error) {
+    console.error('[Brevo] Unable to send verification email:', error);
+    return res.status(502).json({ success: false, message: 'Unable to deliver the verification email.' });
+  }
 });
 
 app.get('/admin/stats', (req, res) => respondWithAdminHistory(res, 'stats', (history) => {
@@ -1815,7 +1798,7 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, requireAct
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
     return res.status(400).json({ success: false, message: 'A valid recipient email is required.' });
   }
-  if (!emailTransport) return res.status(503).json({ success: false, message: 'Email delivery is not configured.' });
+  if (!emailMailer) return res.status(503).json({ success: false, message: 'Brevo email delivery is not configured.' });
   try {
     const found = recordForIssuer(req.params.referenceNumber, req.issuerContext.employer.id);
     if (!found) return res.status(404).json({ success: false, message: 'Verification record was not found or has expired.' });
@@ -1832,15 +1815,14 @@ app.post('/api/letters/:referenceNumber/email', requireIssuerSession, requireAct
       content: Buffer.from(file.contents, 'base64'),
       contentType: file.mediaType
     }))];
-    sendEmailNonBlocking({
-      from: emailFrom,
+    await sendEmail({
       to: recipientEmail,
       cc: req.issuerContext.employer.businessEmail,
       subject: `Employment Verification · ${req.params.referenceNumber}`,
       text: `Please find the employment verification letter and requested attachments.\n\nDocument ID: ${req.params.referenceNumber}\n${issuerAuth.optionalFooter()}`,
       attachments
-    }, 'verification record');
-    return res.json({ success: true, message: `Verification letter queued for delivery to ${recipientEmail}.` });
+    });
+    return res.json({ success: true, message: `Verification letter delivered to ${recipientEmail}.` });
   } catch (error) {
     console.error('Unable to send verification record:', error);
     return res.status(502).json({ success: false, message: 'Unable to send this verification letter.' });
@@ -2204,6 +2186,10 @@ async function startServer() {
 
 startServer().catch((error) => {
   console.error('Unable to initialize application storage:', error);
+  if (database) {
+    database.close();
+    database = undefined;
+  }
   process.exitCode = 1;
 });
 

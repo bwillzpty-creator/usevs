@@ -4,7 +4,6 @@ const fs = require('fs/promises');
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SUPPORT_EMAIL = 'support@us-evs.com';
 // Used only while no email transport is configured, so the support account can still sign in.
-const SUPPORT_STATIC_CODE = '000000';
 const SESSION_COOKIE = 'usevs_issuer_session';
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
 const CHALLENGE_LIFETIME_MS = 10 * 60 * 1000;
@@ -79,11 +78,10 @@ function parseBusinessDocument(value) {
 }
 
 class IssuerAuth {
-  constructor({ storePath, encryptionKey, emailTransport, emailFrom, publicBaseUrl, reviewToken, businessPostalAddress, qaOtpEmail, qaOtpCode }) {
+  constructor({ storePath, encryptionKey, emailMailer, publicBaseUrl, reviewToken, businessPostalAddress, qaOtpEmail, qaOtpCode }) {
     this.storePath = storePath;
     this.encryptionKey = readEncryptionKey(encryptionKey);
-    this.emailTransport = emailTransport;
-    this.emailFrom = emailFrom;
+    this.emailMailer = emailMailer;
     this.publicBaseUrl = typeof publicBaseUrl === 'string' ? publicBaseUrl.replace(/\/+$/, '') : '';
     this.businessPostalAddress = typeof businessPostalAddress === 'string' ? businessPostalAddress.trim() : '';
     this.reviewToken = typeof reviewToken === 'string' && reviewToken.length >= 32 ? reviewToken : '';
@@ -265,8 +263,8 @@ class IssuerAuth {
   }
 
   async registerEmployer(input, remoteAddress) {
-    if (!this.emailTransport || !this.publicBaseUrl) {
-      throw new Error('Employer registration requires configured email delivery and PUBLIC_BASE_URL.');
+    if (!this.emailMailer || !this.publicBaseUrl) {
+      throw new Error('Employer registration requires BREVO_API_KEY and PUBLIC_BASE_URL.');
     }
     if (!this.encryptionKey) throw new Error('Employer registration requires DATA_ENCRYPTION_KEY.');
     const nowTime = Date.now();
@@ -339,12 +337,18 @@ class IssuerAuth {
     });
 
     const confirmationUrl = `${this.publicBaseUrl}/api/employers/confirm?token=${encodeURIComponent(emailToken)}`;
-    this.sendEmailNonBlocking({
-      from: this.emailFrom,
-      to: businessEmail,
-      subject: 'Confirm your employer account',
-      text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.${this.optionalFooter()}`
-    }, 'employer confirmation');
+    try {
+      await this.sendEmail({
+        to: businessEmail,
+        subject: 'Confirm your employer account',
+        text: `Confirm the corporate email for ${legalName}: ${confirmationUrl}\n\nAfter confirmation, the account must pass business review before letters can be issued.${this.optionalFooter()}`
+      });
+    } catch (error) {
+      await this.updateStore((store) => {
+        store.employers = store.employers.filter((entry) => entry.id !== employer.id);
+      });
+      throw error;
+    }
     return { employerId: employer.id };
   }
 
@@ -407,35 +411,29 @@ class IssuerAuth {
     return { token, employer: this.publicEmployer(employer), officer: this.publicOfficer(officer) };
   }
 
-  senderAddress() {
-    const from = String(this.emailFrom || '');
-    return from.includes('<') ? from : `"US-EVS Support" <${from}>`;
-  }
-
   // Footer is appended when a postal address is configured; transactional mail still sends without it.
   optionalFooter() {
     try { return this.getEmailFooter(); } catch { return ''; }
   }
 
-  sendEmailNonBlocking(message, label) {
-    if (!this.emailTransport) return;
-    queueMicrotask(() => {
-      try {
-        Promise.resolve(this.emailTransport.sendMail(message)).catch((err) => {
-          console.warn('SMTP connection failed, bypassing email delivery:', err?.message || err);
-        });
-      } catch (err) {
-        console.warn('SMTP connection failed, bypassing email delivery:', err?.message || err);
-      }
-    });
+  async sendEmail(message) {
+    if (!this.emailMailer) {
+      const error = new Error('Brevo email delivery is not configured; set BREVO_API_KEY.');
+      error.code = 'BREVO_NOT_CONFIGURED';
+      throw error;
+    }
+    try {
+      return await this.emailMailer.sendEmail(message);
+    } catch (cause) {
+      console.error('[Brevo] Email delivery failed:', cause);
+      const error = new Error('Brevo email delivery failed.', { cause });
+      error.code = 'BREVO_DELIVERY_FAILED';
+      throw error;
+    }
   }
 
   async sendTransactional(to, subject, text) {
-    if (!this.emailTransport || !this.emailFrom) return false;
-    this.sendEmailNonBlocking(
-      { from: this.senderAddress(), to, subject, text: `${text}${this.optionalFooter()}` },
-      subject
-    );
+    await this.sendEmail({ to, subject, text: `${text}${this.optionalFooter()}` });
     return true;
   }
 
@@ -628,7 +626,9 @@ class IssuerAuth {
     const email = normalizeEmail(emailValue);
     if (!EMAIL_PATTERN.test(email) || email.length > 254) return;
     this.checkRate(`reset:${remoteAddress || 'unknown'}:${email}`, 5, 60 * 60 * 1000, 'Too many reset requests. Try again later.');
-    if (!this.emailTransport || !this.publicBaseUrl) return;
+    if (!this.emailMailer || !this.publicBaseUrl) {
+      throw new Error('Password reset email delivery requires BREVO_API_KEY and PUBLIC_BASE_URL.');
+    }
     const store = await this.readStore();
     const employer = store.employers.find((entry) => entry.status === 'verified' &&
       entry.officers.some((item) => normalizeEmail(item.email) === email && item.active));
@@ -640,15 +640,15 @@ class IssuerAuth {
     this.resetTokens.set(digest(token), { email, expiresAt: Date.now() + RESET_TOKEN_LIFETIME_MS });
     const link = `${this.publicBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     try {
-      this.sendEmailNonBlocking({
-        from: this.emailFrom,
+      await this.sendEmail({
         to: email,
         subject: 'Reset your US-EVS password',
         text: `Use this link to set a new password. It expires in 30 minutes and works once:\n\n${link}\n\nIf you did not request this, ignore this email.${this.optionalFooter()}`,
         html: `<p>Use the button below to set a new password. The link expires in 30 minutes and works once.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;font-weight:700;text-decoration:none;border-radius:4px">Reset password</a></p><p>Or copy this link: ${link}</p><p>If you did not request this, ignore this email.</p>`
-      }, 'password reset');
-    } catch (err) {
-      console.warn('SMTP connection failed, bypassing password reset email:', err?.message || err);
+      });
+    } catch (error) {
+      this.resetTokens.delete(digest(token));
+      throw error;
     }
   }
 
@@ -730,11 +730,10 @@ class IssuerAuth {
       throw new Error('Sign-in failed or employer authorization is incomplete.');
     }
 
-    const supportFallback = !this.emailTransport && email === SUPPORT_EMAIL;
-    const qaOnly = supportFallback || (Boolean(this.qaOtpCode) && email === this.qaOtpEmail);
-    if (!this.emailTransport && !qaOnly) throw new Error('One-time code delivery is not configured.');
+    const qaOnly = Boolean(this.qaOtpCode) && email === this.qaOtpEmail;
+    if (!this.emailMailer && !qaOnly) throw new Error('One-time code delivery is not configured; set BREVO_API_KEY.');
 
-    const code = supportFallback ? SUPPORT_STATIC_CODE : qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const code = qaOnly ? this.qaOtpCode : String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const challengeId = crypto.randomBytes(24).toString('base64url');
     this.challenges.set(challengeId, {
       employerId: employer.id,
@@ -745,12 +744,16 @@ class IssuerAuth {
       qaOnly
     });
     if (!qaOnly) {
-      this.sendEmailNonBlocking({
-        from: this.emailFrom,
-        to: officer.email,
-        subject: 'Your HR sign-in verification code',
-        text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.optionalFooter()}`
-      }, 'login verification code');
+      try {
+        await this.sendEmail({
+          to: officer.email,
+          subject: 'Your HR sign-in verification code',
+          text: `Your one-time sign-in code is ${code}. It expires in 10 minutes. Do not share this code.${this.optionalFooter()}`
+        });
+      } catch (error) {
+        this.challenges.delete(challengeId);
+        throw error;
+      }
     }
     return { challengeId, qaOnly };
   }

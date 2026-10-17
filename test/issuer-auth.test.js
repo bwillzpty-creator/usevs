@@ -12,8 +12,7 @@ test('review account is seeded idempotently and still requires email OTP', async
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: { sendMail: async (message) => messages.push(message) },
-    emailFrom: 'verification@example.test',
+    emailMailer: { sendEmail: async (message) => messages.push(message) },
     publicBaseUrl: 'https://verification.example.test',
     reviewToken: '',
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
@@ -34,30 +33,26 @@ test('review account is seeded idempotently and still requires email OTP', async
   assert.equal(context.officer.email, 'review@us-evs.com');
 });
 
-test('SMTP failures do not block login challenge creation', async (t) => {
+test('Brevo failures reject login and remove the unused challenge', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-mail-timeout-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const messages = [];
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
-    emailTransport: {
-      sendMail: async (message) => {
+    emailMailer: {
+      sendEmail: async (message) => {
         messages.push(message);
         throw new Error('Connection timeout');
       }
     },
-    emailFrom: 'verification@example.test',
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
   });
   await auth.initialize();
   await auth.ensureReviewAccount('ReviewPassword123!');
 
-  const challenge = await auth.beginSignIn('review@us-evs.com', 'ReviewPassword123!', '127.0.0.1');
-  await new Promise((resolve) => setImmediate(resolve));
+  await assert.rejects(auth.beginSignIn('review@us-evs.com', 'ReviewPassword123!', '127.0.0.1'), /Brevo email delivery failed/);
   assert.equal(messages.length, 1);
-  const code = messages[0].text.match(/\b(\d{6})\b/)[1];
-  const login = await auth.completeSignIn(challenge.challengeId, code);
-  assert.ok(login.token);
+  assert.equal(auth.challenges.size, 0);
 });
 
 test('employer review and HR OTP are required for an issuer session', async (t) => {
@@ -67,8 +62,7 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: { sendMail: async (message) => messages.push(message) },
-    emailFrom: 'verification@example.test',
+    emailMailer: { sendEmail: async (message) => messages.push(message) },
     publicBaseUrl: 'https://verification.example.test',
     reviewToken: 'test-review-token-with-more-than-32-characters',
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
@@ -153,19 +147,18 @@ test('employer review and HR OTP are required for an issuer session', async (t) 
   assert.equal(JSON.stringify(retained).includes('retained employee data'), false);
 });
 
-test('consumer email domains register, and support signs in with the static code only without email delivery', async (t) => {
+test('consumer email domains register; sign-in requires mail or explicit QA configuration', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-support-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const options = {
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailFrom: 'verification@example.test',
     publicBaseUrl: 'https://verification.example.test',
     reviewToken: '',
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
   };
   const messages = [];
-  const mailed = new IssuerAuth({ ...options, emailTransport: { sendMail: async (message) => messages.push(message) } });
+  const mailed = new IssuerAuth({ ...options, emailMailer: { sendEmail: async (message) => messages.push(message) } });
   await mailed.initialize();
   await mailed.registerEmployer({
     legalBusinessName: 'Gmail Co', businessAddress: '1 Main St', businessPhone: '555-0100',
@@ -178,11 +171,11 @@ test('consumer email domains register, and support signs in with the static code
   await mailed.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.2');
   assert.equal(messages.length, 2);
 
-  const unmailed = new IssuerAuth({ ...options, emailTransport: null });
-  const challenge = await unmailed.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.3');
-  const login = await unmailed.completeSignIn(challenge.challengeId, '000000');
-  const context = await unmailed.getSession({ headers: { cookie: `${SESSION_COOKIE}=${login.token}` } });
-  assert.equal(context.officer.email, 'support@us-evs.com');
+  const unmailed = new IssuerAuth({ ...options, emailMailer: null });
+  await assert.rejects(
+    unmailed.beginSignIn('support@us-evs.com', 'Support2026!', '127.0.0.3'),
+    /delivery is not configured/
+  );
 });
 
 test('profile updates persist and encrypt the EIN', async (t) => {
@@ -191,8 +184,7 @@ test('profile updates persist and encrypt the EIN', async (t) => {
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: null,
-    emailFrom: '',
+    emailMailer: null,
     publicBaseUrl: '',
     reviewToken: '',
     businessPostalAddress: ''
@@ -227,7 +219,8 @@ test('active sessions roll their expiry forward', async (t) => {
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: null, emailFrom: '', publicBaseUrl: '', reviewToken: '', businessPostalAddress: ''
+    emailMailer: null, publicBaseUrl: '', reviewToken: '', businessPostalAddress: '',
+    qaOtpEmail: 'support@us-evs.com', qaOtpCode: '000000'
   });
   await auth.initialize();
   await auth.ensureSupportAccount('Support2026!');
@@ -247,8 +240,7 @@ test('password change verifies the current password; reset needs an emailed code
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: { sendMail: async (message) => messages.push(message) },
-    emailFrom: 'verification@example.test',
+    emailMailer: { sendEmail: async (message) => messages.push(message) },
     publicBaseUrl: 'https://verification.example.test',
     reviewToken: '',
     businessPostalAddress: '100 Example Avenue, Example City, NY 10001'
@@ -285,23 +277,26 @@ test('password reset sends nothing and cannot be forced without email delivery',
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: null, emailFrom: '', publicBaseUrl: '', reviewToken: '', businessPostalAddress: ''
+    emailMailer: null, publicBaseUrl: '', reviewToken: '', businessPostalAddress: '',
+    qaOtpEmail: 'support@us-evs.com', qaOtpCode: '000000'
   });
   await auth.initialize();
   await auth.ensureSupportAccount('Support2026!');
-  await auth.requestPasswordReset('support@us-evs.com', '1.1.1.1');
+  await assert.rejects(
+    auth.requestPasswordReset('support@us-evs.com', '1.1.1.1'),
+    /requires BREVO_API_KEY and PUBLIC_BASE_URL/
+  );
   await assert.rejects(auth.resetPassword('000000', 'HijackedPassword99!'), /invalid or has expired/);
   assert.ok(await auth.beginSignIn('support@us-evs.com', 'Support2026!', '1.1.1.1'));
 });
 
-test('password reset requests stay successful when mail dispatch throws', async (t) => {
+test('password reset email failures invalidate the undelivered token', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'usevs-pw-mail-failure-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const auth = new IssuerAuth({
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: { sendMail: async () => { throw new Error('Connection timeout'); } },
-    emailFrom: 'verification@example.test',
+    emailMailer: { sendEmail: async () => { throw new Error('Brevo API failure'); } },
     publicBaseUrl: 'https://verification.example.test',
     reviewToken: '',
     businessPostalAddress: ''
@@ -309,13 +304,8 @@ test('password reset requests stay successful when mail dispatch throws', async 
   await auth.initialize();
   await auth.ensureReviewAccount('ReviewPassword123!');
 
-  await assert.doesNotReject(auth.requestPasswordReset('review@us-evs.com', '1.1.1.1'));
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(auth.resetTokens.size, 1);
-
-  auth.sendEmailNonBlocking = () => { throw new Error('SMTP dispatch unavailable'); };
-  await assert.doesNotReject(auth.requestPasswordReset('review@us-evs.com', '1.1.1.2'));
-  assert.equal(auth.resetTokens.size, 1);
+  await assert.rejects(auth.requestPasswordReset('review@us-evs.com', '1.1.1.1'), /Brevo email delivery failed/);
+  assert.equal(auth.resetTokens.size, 0);
 });
 
 test('sessions survive a server restart', async (t) => {
@@ -324,7 +314,8 @@ test('sessions survive a server restart', async (t) => {
   const options = {
     storePath: path.join(directory, 'issuer_accounts.json'),
     encryptionKey: Buffer.alloc(32, 7).toString('base64'),
-    emailTransport: null, emailFrom: '', publicBaseUrl: '', reviewToken: '', businessPostalAddress: ''
+    emailMailer: null, publicBaseUrl: '', reviewToken: '', businessPostalAddress: '',
+    qaOtpEmail: 'support@us-evs.com', qaOtpCode: '000000'
   };
   const first = new IssuerAuth(options);
   await first.initialize();
